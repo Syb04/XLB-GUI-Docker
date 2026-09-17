@@ -32,6 +32,7 @@ _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _SCALE = {"m": 1.0, "cm": 1.0e-2, "mm": 1.0e-3}
 _MESH_EXTENSIONS = {".stl", ".obj"}
 _CAD_EXTENSIONS = {".step", ".stp", ".iges", ".igs", ".brep"}
+CadSurface = tuple[np.ndarray, np.ndarray, dict[str, Any]]
 
 
 def _unit_scale(unit: str) -> tuple[str, float]:
@@ -715,6 +716,25 @@ def _classify_surface(origin: np.ndarray, spacing: np.ndarray, shape: tuple[int,
     return labels.reshape(shape)
 
 
+def _surface_bounds(surface: CadSurface) -> np.ndarray:
+    """Return the finite ``(minimum, maximum)`` bounds for one CAD asset."""
+
+    vertices = np.asarray(surface[0], dtype=np.float64)
+    bounds = np.asarray([vertices.min(axis=0), vertices.max(axis=0)], dtype=np.float64)
+    if bounds.shape != (2, 3) or not np.isfinite(bounds).all() or np.any(bounds[1] <= bounds[0]):
+        raise ValueError("CAD surface bounds must define a finite positive volume")
+    return bounds
+
+
+def _union_surface_bounds(*surfaces: CadSurface | None) -> np.ndarray:
+    """Return one common grid extent covering every supplied CAD surface."""
+
+    bounds = [_surface_bounds(surface) for surface in surfaces if surface is not None]
+    if not bounds:
+        raise ValueError("at least one CAD surface is required")
+    return np.asarray([np.min([item[0] for item in bounds], axis=0), np.max([item[1] for item in bounds], axis=0)], dtype=np.float64)
+
+
 def _normalise_cells(project: Mapping[str, Any]) -> np.ndarray:
     raw = project["mesh"]["cells"]
     cells = np.asarray(raw, dtype=np.int64)
@@ -728,12 +748,13 @@ def _normalise_cells(project: Mapping[str, Any]) -> np.ndarray:
 def _plan_mesh(
     project: Mapping[str, Any],
     assets_dir: str | Path,
-) -> tuple[dict[str, Any], tuple[np.ndarray, np.ndarray, dict[str, Any]] | None]:
+) -> tuple[dict[str, Any], CadSurface | None, CadSurface | None]:
     """Resolve one mesh plan shared by :func:`estimate_mesh` and build_mesh.
 
-    The returned CAD surface tuple is loaded only when CAD metadata is needed
-    for planning; build_mesh reuses it for classification and contact links.
-    No voxel-sized array is allocated here.
+    The returned fluid and optional solid CAD surfaces are loaded once for
+    planning and reused by :func:`build_mesh` for classification and contact
+    links.  Paired CAD fluid/solid projects plan one common grid from the
+    union of both imported bounds.  No voxel-sized array is allocated here.
     """
 
     geometry = project["geometry"]
@@ -741,15 +762,19 @@ def _plan_mesh(
     kind = geometry["kind"]
     role = geometry["role"]
     target = mesh.get("target_cells")
-    surface: tuple[np.ndarray, np.ndarray, dict[str, Any]] | None = None
+    surface: CadSurface | None = None
+    solid_surface: CadSurface | None = None
     if kind == "cad":
         surface = _asset_surface(Path(assets_dir), geometry["asset_id"])
+        solid_asset_id = geometry.get("solid_asset_id")
+        if solid_asset_id is not None:
+            solid_surface = _asset_surface(Path(assets_dir), solid_asset_id)
 
     if target is not None:
         if kind == "box" and role == "fluid":
             size = np.asarray(geometry["size"], dtype=np.float64)
             origin = np.asarray(geometry.get("origin", [0.0, 0.0, 0.0]), dtype=np.float64)
-            return plan_box(size, target, origin=origin), surface
+            return plan_box(size, target, origin=origin), surface, solid_surface
         if role == "obstacle":
             if any(key in geometry for key in ("computational_box", "domain", "domain_size", "box_size")):
                 domain_size, domain_origin = _box_descriptor(geometry)
@@ -765,13 +790,12 @@ def _plan_mesh(
                 # Preserve the established error for a box obstacle without
                 # an explicit computational box descriptor.
                 domain_size, domain_origin = _box_descriptor(geometry)
-            return plan_box(domain_size, target, origin=domain_origin), surface
+            return plan_box(domain_size, target, origin=domain_origin), surface, solid_surface
         # CAD fluid target mode is metadata-driven.  In particular, an old
         # geometry.size must never replace the imported CAD bounds.
         assert surface is not None
-        vertices = surface[0]
-        bounds = np.asarray([vertices.min(axis=0), vertices.max(axis=0)], dtype=np.float64)
-        return plan_cad(bounds, target), surface
+        bounds = _union_surface_bounds(surface, solid_surface)
+        return plan_cad(bounds, target), surface, solid_surface
 
     cells = _normalise_cells(project)
     if kind == "box" and role == "fluid":
@@ -785,7 +809,7 @@ def _plan_mesh(
             "origin": origin.tolist(),
             "target_cells": None,
             "warnings": [],
-        }, surface
+        }, surface, solid_surface
     if kind == "box" and role == "obstacle":
         domain_size, domain_origin = _box_descriptor(geometry)
         spacing = _spacing(domain_size, cells.astype(np.float64))
@@ -796,11 +820,11 @@ def _plan_mesh(
             "origin": domain_origin.tolist(),
             "target_cells": None,
             "warnings": [],
-        }, surface
+        }, surface, solid_surface
 
     assert surface is not None
     vertices, _faces, _metadata = surface
-    bounds = np.asarray([vertices.min(axis=0), vertices.max(axis=0)], dtype=np.float64)
+    bounds = _union_surface_bounds(surface, solid_surface)
     if role == "fluid":
         origin, spacing, shape, warnings = _cad_grid(bounds, cells)
         return {
@@ -810,7 +834,7 @@ def _plan_mesh(
             "origin": origin.tolist(),
             "target_cells": None,
             "warnings": warnings,
-        }, surface
+        }, surface, solid_surface
 
     if any(key in geometry for key in ("computational_box", "domain", "domain_size", "box_size")):
         domain_size, domain_origin = _box_descriptor(geometry)
@@ -830,7 +854,7 @@ def _plan_mesh(
         "origin": domain_origin.tolist(),
         "target_cells": None,
         "warnings": [f"CAD obstacle centroid [m]: {float(value):.9g}" for value in vertices.mean(axis=0)],
-    }, surface
+    }, surface, solid_surface
 
 
 _BOUNDARY_FACES = ("xmin", "xmax", "ymin", "ymax", "zmin", "zmax")
@@ -912,6 +936,111 @@ def _apply_solid_regions(
         fluid_mask[selected] = False
         solid_mask[selected] = True
         material_index[selected] = index
+
+
+def _paired_face_contact_count(fluid_mask: np.ndarray, solid_mask: np.ndarray) -> int:
+    """Count Cartesian fluid/solid face contacts without allocating a dilated mask."""
+
+    count = 0
+    for axis in range(3):
+        first = [slice(None)] * 3
+        second = [slice(None)] * 3
+        first[axis] = slice(0, -1)
+        second[axis] = slice(1, None)
+        count += int(np.count_nonzero(fluid_mask[tuple(first)] & solid_mask[tuple(second)]))
+        count += int(np.count_nonzero(solid_mask[tuple(first)] & fluid_mask[tuple(second)]))
+    return count
+
+
+def _interior_overlap(
+    first: CadSurface,
+    second: CadSurface,
+    spacing: np.ndarray,
+) -> bool:
+    """Detect a volume intersection missed by cell-centre rasterisation.
+
+    The voxel masks remain the authoritative discretisation, but a very thin
+    intersection can fall between centres.  Testing a bounded sample of
+    vertices strictly inside the other closed surface catches that invalid
+    geometry while ignoring vertices that lie on a shared fluid/solid
+    interface.
+    """
+
+    first_vertices = np.asarray(first[0], dtype=np.float64)
+    second_vertices = np.asarray(second[0], dtype=np.float64)
+    first_bounds = _surface_bounds(first)
+    second_bounds = _surface_bounds(second)
+    scale = max(float(np.linalg.norm(np.ptp(np.vstack((first_vertices, second_vertices)), axis=0))), 1.0e-12)
+    tolerance = max(float(np.max(spacing)) * 1.0e-3, scale * 1.0e-9, 1.0e-12)
+
+    def strictly_inside(points: np.ndarray, other: CadSurface, other_bounds: np.ndarray) -> bool:
+        if len(points) > 4096:
+            points = points[np.linspace(0, len(points) - 1, 4096, dtype=np.int64)]
+        lower = other_bounds[0] + tolerance
+        upper = other_bounds[1] - tolerance
+        candidates = points[np.all((points > lower) & (points < upper), axis=1)]
+        if len(candidates) == 0:
+            return False
+        values = _contains(candidates, other[0], other[1])
+        if not np.any(values):
+            return False
+        # ``contains`` implementations differ on boundary points.  Ignore
+        # any positive result whose nearest surface is within the geometric
+        # tolerance before declaring a true volume overlap.
+        selected = candidates[values]
+        try:
+            _, distances, _ = _closest_surface_points(selected, other[0], other[1])
+        except (ImportError, ValueError):
+            # The voxel overlap check below remains authoritative when a
+            # spatial index is unavailable for this optional refinement.
+            return False
+        return bool(np.any(np.asarray(distances) > tolerance))
+
+    return strictly_inside(first_vertices, second, second_bounds) or strictly_inside(second_vertices, first, first_bounds)
+
+
+def _surface_contact_distance(first: CadSurface, second: CadSurface) -> float:
+    """Return a bounded estimate of the distance between two CAD surfaces."""
+
+    samples: list[np.ndarray] = []
+    for surface in (first, second):
+        vertices, faces, _metadata = surface
+        triangles = vertices[faces]
+        points = np.concatenate((vertices, triangles.mean(axis=1)), axis=0)
+        if len(points) > 4096:
+            points = points[np.linspace(0, len(points) - 1, 4096, dtype=np.int64)]
+        samples.append(points)
+    distances: list[float] = []
+    for points, other in ((samples[0], second), (samples[1], first)):
+        try:
+            _, values, _ = _closest_surface_points(points, other[0], other[1])
+        except (ImportError, ValueError):
+            continue
+        values = np.asarray(values, dtype=float)
+        if values.size:
+            distances.append(float(np.nanmin(values)))
+    return min(distances, default=float("inf"))
+
+
+def _validate_paired_cad_masks(
+    fluid_mask: np.ndarray,
+    solid_mask: np.ndarray,
+    fluid_surface: CadSurface,
+    solid_surface: CadSurface,
+    spacing: np.ndarray,
+) -> None:
+    """Validate disjoint paired CAD volumes and require a real interface."""
+
+    if np.any(fluid_mask & solid_mask):
+        raise ValueError("paired CAD fluid and solid volumes overlap")
+    if _interior_overlap(fluid_surface, solid_surface, spacing):
+        raise ValueError("paired CAD fluid and solid volumes overlap")
+    if _paired_face_contact_count(fluid_mask, solid_mask) == 0:
+        distance = _surface_contact_distance(fluid_surface, solid_surface)
+        bounds = _union_surface_bounds(fluid_surface, solid_surface)
+        scale = max(float(np.linalg.norm(bounds[1] - bounds[0])), 1.0e-12)
+        if not math.isfinite(distance) or distance > max(scale * 1.0e-9, 1.0e-12):
+            raise ValueError("paired CAD fluid and solid volumes must touch")
 
 
 def _closest_surface_points(
@@ -1140,6 +1269,7 @@ def _result(
     boundary_normals: Mapping[str, list[float]] | None = None,
     surface_groups: list[dict[str, Any]] | None = None,
     triangle_groups: list[str] | None = None,
+    geometry_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     output: dict[str, Any] = {
         "fluid_mask": np.asarray(mask, dtype=bool),
@@ -1153,6 +1283,12 @@ def _result(
         "boundary_links": {str(key): np.asarray(value, dtype=bool) for key, value in (boundary_links or {}).items()},
         "boundary_normals": {str(key): [float(component) for component in value] for key, value in (boundary_normals or {}).items()},
     }
+    if geometry_metadata is not None:
+        # Keep this metadata JSON-compatible and separate from the solver
+        # arrays.  In particular, the selected fluid surface remains the
+        # public ``surface_vertices``/``surface_faces`` pair used by CAD face
+        # selectors; a paired solid is described by bounds and asset id only.
+        output["geometry_metadata"] = dict(geometry_metadata)
     if vertices is not None and faces is not None:
         output["surface_vertices"] = np.asarray(vertices, dtype=np.float64)
         output["surface_faces"] = np.asarray(faces, dtype=np.int32)
@@ -1169,7 +1305,7 @@ def estimate_mesh(project: Mapping[str, Any], assets_dir: str | Path) -> dict[st
     """Return a mesh plan without allocating voxel or boundary-link arrays."""
 
     normalized = validate_project(project)
-    plan, _surface = _plan_mesh(normalized, assets_dir)
+    plan, _surface, _solid_surface = _plan_mesh(normalized, assets_dir)
     velocities = [np.asarray(boundary['flow']['velocity'], dtype=float)
                   for boundary in normalized['boundaries']
                   if boundary['flow']['type'] == 'velocity' and normalized['physics']['flow']]
@@ -1235,7 +1371,7 @@ def build_mesh(project: Mapping[str, Any], assets_dir: str | Path) -> dict[str, 
 
     normalized = validate_project(project)
     geometry = normalized["geometry"]
-    plan, cad_surface = _plan_mesh(normalized, assets_dir)
+    plan, cad_surface, solid_cad_surface = _plan_mesh(normalized, assets_dir)
     cells_array = np.asarray(plan["shape"], dtype=np.int64)
     cells_tuple = tuple(int(value) for value in cells_array)
     kind = geometry["kind"]
@@ -1254,6 +1390,7 @@ def build_mesh(project: Mapping[str, Any], assets_dir: str | Path) -> dict[str, 
         vertices: np.ndarray | None = None,
         faces: np.ndarray | None = None,
         metadata: Mapping[str, Any] | None = None,
+        geometry_metadata: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         fluid_mask = np.asarray(fluid_mask, dtype=bool)
         solid_mask = np.asarray(solid_mask, dtype=bool)
@@ -1297,6 +1434,7 @@ def build_mesh(project: Mapping[str, Any], assets_dir: str | Path) -> dict[str, 
             boundary_normals=normals,
             surface_groups=list(groups) if isinstance(groups, list) else None,
             triangle_groups=[str(value) for value in triangle_groups] if isinstance(triangle_groups, list) else None,
+            geometry_metadata=geometry_metadata,
         )
 
     if kind == "box" and role == "fluid":
@@ -1374,7 +1512,7 @@ def build_mesh(project: Mapping[str, Any], assets_dir: str | Path) -> dict[str, 
 
     assert cad_surface is not None
     vertices, faces, metadata = cad_surface
-    bounds = np.asarray([vertices.min(axis=0), vertices.max(axis=0)], dtype=np.float64)
+    bounds = _union_surface_bounds(cad_surface, solid_cad_surface)
     if role == "fluid":
         origin = np.asarray(plan["origin"], dtype=np.float64)
         spacing = np.asarray(plan["spacing"], dtype=np.float64)
@@ -1383,9 +1521,24 @@ def build_mesh(project: Mapping[str, Any], assets_dir: str | Path) -> dict[str, 
         fluid_mask = _classify_surface(origin, spacing, actual_shape, vertices, faces)
         if not fluid_mask.any():
             raise ValueError("CAD fluid volume contains no cell centres; refine mesh resolution")
-        solid_mask = np.zeros(actual_shape, dtype=bool)
+        if solid_cad_surface is not None:
+            solid_vertices, solid_faces, _solid_metadata = solid_cad_surface
+            solid_mask = _classify_surface(origin, spacing, actual_shape, solid_vertices, solid_faces)
+            if not solid_mask.any():
+                raise ValueError("CAD solid volume contains no cell centres; refine mesh resolution")
+            _validate_paired_cad_masks(
+                fluid_mask,
+                solid_mask,
+                cad_surface,
+                solid_cad_surface,
+                spacing,
+            )
+        else:
+            solid_mask = np.zeros(actual_shape, dtype=bool)
         material_index = np.full(actual_shape, -1, dtype=np.int32)
         material_index[fluid_mask] = fluid_material
+        if solid_cad_surface is not None:
+            material_index[solid_mask] = int(material_ids[geometry["solid_material_id"]])
         _apply_solid_regions(
             fluid_mask,
             solid_mask,
@@ -1398,6 +1551,18 @@ def build_mesh(project: Mapping[str, Any], assets_dir: str | Path) -> dict[str, 
         )
         if not fluid_mask.any():
             raise ValueError("solid regions consume every CAD fluid cell")
+        geometry_metadata: dict[str, Any] = {
+            "kind": "cad",
+            "role": "fluid",
+            "asset_id": geometry["asset_id"],
+            "fluid_asset_id": geometry["asset_id"],
+            "solid_asset_id": geometry.get("solid_asset_id"),
+            "solid_material_id": geometry.get("solid_material_id"),
+            "bounds": bounds.tolist(),
+            "fluid_bounds": _surface_bounds(cad_surface).tolist(),
+        }
+        if solid_cad_surface is not None:
+            geometry_metadata["solid_bounds"] = _surface_bounds(solid_cad_surface).tolist()
         return finish(
             fluid_mask,
             solid_mask,
@@ -1408,6 +1573,7 @@ def build_mesh(project: Mapping[str, Any], assets_dir: str | Path) -> dict[str, 
             vertices=vertices,
             faces=faces,
             metadata=metadata,
+            geometry_metadata=geometry_metadata,
         )
 
     # A CAD obstacle is classified inside a computational box; ``geometry.size``

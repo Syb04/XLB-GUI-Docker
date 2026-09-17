@@ -47,7 +47,7 @@ def _json_value(value: Any, *, remove_asset_id: bool = False) -> Any:
         result: dict[str, Any] = {}
         for key in sorted(value, key=lambda item: str(item)):
             key_text = str(key)
-            if remove_asset_id and key_text == "asset_id":
+            if remove_asset_id and key_text in {"asset_id", "solid_asset_id"}:
                 continue
             result[key_text] = _json_value(value[key], remove_asset_id=remove_asset_id)
         return result

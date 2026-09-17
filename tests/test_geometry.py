@@ -111,6 +111,45 @@ class GeometryTests(unittest.TestCase):
             self.assertEqual(mesh["shape"], [10, 10, 10])
             self.assertTrue(mesh["fluid_mask"].all())
 
+    def test_paired_cad_fluid_and_solid_meshes_share_one_cht_grid(self):
+        """Separate closed CAD volumes must classify without overlap."""
+        fluid_volume = trimesh.creation.box(extents=[10.0, 10.0, 10.0])
+        fluid_volume.apply_translation([5.0, 5.0, 5.0])
+        solid_volume = trimesh.creation.box(extents=[10.0, 10.0, 10.0])
+        solid_volume.apply_translation([15.0, 5.0, 5.0])
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fluid_path = root / "fluid.stl"
+            solid_path = root / "solid.stl"
+            fluid_volume.export(fluid_path)
+            solid_volume.export(solid_path)
+            fluid_asset = import_cad(fluid_path, root / "assets", unit="mm")
+            solid_asset = import_cad(solid_path, root / "assets", unit="mm")
+
+            project = default_project()
+            copper = dict(project["materials"][0])
+            copper.update({"id": "copper", "name": "Copper"})
+            project["materials"].append(copper)
+            project["geometry"] = {
+                "kind": "cad",
+                "asset_id": fluid_asset["id"],
+                "solid_asset_id": solid_asset["id"],
+                "solid_material_id": "copper",
+                "role": "fluid",
+                "solids": [],
+            }
+            project["mesh"]["cells"] = [20, 10, 10]
+            mesh = build_mesh(project, root / "assets")
+
+        self.assertEqual(mesh["shape"], [20, 10, 10])
+        self.assertEqual(int(mesh["fluid_mask"].sum()), 1000)
+        self.assertEqual(int(mesh["solid_mask"].sum()), 1000)
+        self.assertFalse(np.any(mesh["fluid_mask"] & mesh["solid_mask"]))
+        self.assertTrue(np.all(mesh["thermal_mask"]))
+        self.assertTrue(np.all(mesh["material_index"][mesh["solid_mask"]] == 1))
+        self.assertEqual(mesh["geometry_metadata"]["fluid_asset_id"], fluid_asset["id"])
+        self.assertEqual(mesh["geometry_metadata"]["solid_asset_id"], solid_asset["id"])
+
     def test_cad_patch_links_and_unresolved_selectors_are_bounded(self):
         cube = trimesh.creation.box(extents=[10.0, 10.0, 10.0])
         with tempfile.TemporaryDirectory() as temp:

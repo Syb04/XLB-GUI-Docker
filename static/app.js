@@ -63,7 +63,7 @@
   const DEFAULT_PROJECT = {
     schema_version: 1,
     name: '無題のモデル',
-    geometry: { kind: 'box', size: [0.06, 0.02, 0.02], asset_id: null, role: 'fluid' },
+    geometry: { kind: 'box', size: [0.06, 0.02, 0.02], asset_id: null, solid_asset_id: null, role: 'fluid' },
     materials: [{
       id: 'water', name: 'Water',
       density: { kind: 'constant', value: 998 },
@@ -142,7 +142,9 @@
     orbit: { yaw: -0.58, pitch: 0.34, zoom: 1 },
     drag: null,
     cadFile: null,
+    cadImportTarget: 'fluid',
     cadAssetMeta: null,
+    cadSolidAssetMeta: null,
     selectedSurface: null,
     projectedFaces: [],
     serverOnline: null,
@@ -246,6 +248,7 @@
       ? project.geometry.size.map((value, index) => numberOr(value, DEFAULT_PROJECT.geometry.size[index]))
       : clone(DEFAULT_PROJECT.geometry.size);
     project.geometry.asset_id = project.geometry.asset_id || null;
+    project.geometry.solid_asset_id = project.geometry.solid_asset_id || null;
     if (Array.isArray(project.geometry.solids)) project.geometry.solids = project.geometry.solids.map(normalizeSolid).filter(Boolean);
     if (project.geometry.solid_material_id !== undefined) project.geometry.solid_material_id = project.geometry.solid_material_id || null;
     project.materials = Array.isArray(project.materials) && project.materials.length ? project.materials : clone(DEFAULT_PROJECT.materials);
@@ -458,6 +461,7 @@
     state.materialTablePages = {};
     invalidateMaterialCsvPreview(false);
     state.cadAssetMeta = null;
+    state.cadSolidAssetMeta = null;
     state.selectedSurface = null;
     state.projectedFaces = [];
     state.history = [];
@@ -472,14 +476,24 @@
     drawAll();
     switchView('geometry');
     renderHistory();
-    if (state.project.geometry.kind === 'cad' && state.project.geometry.asset_id) loadAssetMeta(state.project.geometry.asset_id);
+    if (state.project.geometry.kind === 'cad') {
+      if (state.project.geometry.asset_id) loadAssetMeta(state.project.geometry.asset_id, 'fluid');
+      if (state.project.geometry.solid_asset_id) loadAssetMeta(state.project.geometry.solid_asset_id, 'solid');
+    }
   }
 
-  async function loadAssetMeta(assetId) {
+  async function loadAssetMeta(assetId, target = 'fluid') {
     try {
       const payload = await request(`/api/assets/${encodeURIComponent(assetId)}`);
       const asset = payload.asset || payload;
-      if (state.project?.geometry?.asset_id === assetId) { state.cadAssetMeta = asset; renderTree(); drawGeometry(); renderInspector(); }
+      const matches = target === 'solid'
+        ? state.project?.geometry?.solid_asset_id === assetId
+        : state.project?.geometry?.asset_id === assetId;
+      if (matches) {
+        if (target === 'solid') state.cadSolidAssetMeta = asset;
+        else state.cadAssetMeta = asset;
+        renderTree(); drawGeometry(); renderInspector();
+      }
     } catch (error) {
       pushLog(`CAD アセット情報を取得できません: ${error.message}`, 'warn');
     }
@@ -596,7 +610,7 @@
     const cadGroups = geometry.kind === 'cad' ? surfaceGroups() : [];
     const cadBoundaries = boundaries.filter((boundary) => isCadFace(boundary.face) && boundary.face !== 'cad' && !cadGroups.some((group) => `cad:${surfaceGroupId(group)}` === boundary.face));
     const solidCount = Array.isArray(geometry.solids) ? geometry.solids.length : 0;
-    const cadSolid = geometry.kind === 'cad' && Boolean(geometry.solid_material_id);
+    const cadSolid = geometry.kind === 'cad' && Boolean(geometry.solid_asset_id || geometry.solid_material_id);
     const solidDomainMeta = state.run?.solid_cells ? `solid ${fmt(state.run.solid_cells, 0)}` : cadSolid ? 'CAD CHT' : solidCount ? `${solidCount} solid` : '';
     const resultMeta = state.run ? `${String(state.run.status || 'queued')}${solidDomainMeta ? ` · ${solidDomainMeta}` : ''}` : (solidDomainMeta || '未実行');
     tree.innerHTML = [
@@ -688,9 +702,9 @@
           <div class="info-note">${esc(dimensionNote)}<br>メッシュのセル幅が各軸で一致する必要があります。</div>
           ${geometry.role === 'fluid' ? solidRegionsEditor(geometry) : ''}
         ` : `
-          ${geometry.asset_id ? cadAssetCard(geometry) : '<div class="warn-note">CAD アセットが未指定です。STL / OBJ / STEP / IGES / BREP を読み込んでください。</div>'}
-          <div class="button-row"><button type="button" class="button secondary compact" data-action="import-cad">◇ CAD を読み込む</button></div>
-          ${geometry.role === 'obstacle' ? cadSolidMaterialEditor(geometry) : ''}
+          ${geometry.asset_id ? cadAssetCard(geometry, 'fluid') : '<div class="warn-note">CAD アセットが未指定です。STL / OBJ / STEP / IGES / BREP を読み込んでください。</div>'}
+          <div class="button-row"><button type="button" class="button secondary compact" data-action="import-cad" data-cad-target="fluid">◇ 流体 CAD を読み込む</button></div>
+          ${geometry.role === 'fluid' ? cadSolidAssetEditor(geometry) : cadSolidMaterialEditor(geometry)}
           ${surfaceSelector()}
           <div class="info-note">CAD は表面メッシュとして読み込み、流体マスクをサーバーで生成します。</div>
         `}
@@ -715,6 +729,12 @@
     return `<div class="property-section"><div class="section-title"><span>固体材料 / CHT</span><small>CAD OBSTACLE</small></div><div class="form-field"><label for="solidMaterialSelect">CAD の固体材料</label><select id="solidMaterialSelect" data-bind="geometry.solid_material_id"><option value="" ${!geometry.solid_material_id ? 'selected' : ''}>指定なし（流体のみ）</option>${options}</select></div><small class="muted">材料を指定すると CAD 内部の温度場を流体と連成します。</small></div>`;
   }
 
+  function cadSolidAssetEditor(geometry) {
+    const options = state.project.materials.map((material) => `<option value="${esc(material.id)}" ${material.id === geometry.solid_material_id ? 'selected' : ''}>${esc(material.name)}</option>`).join('');
+    const solidAsset = geometry.solid_asset_id ? cadAssetCard(geometry, 'solid') : '<div class="info-note">固体 CAD が未指定です。流体 CAD と別の STL / OBJ / STEP / IGES / BREP を選択できます。</div>';
+    return `<div class="property-section cad-pair-section"><div class="section-title"><span>固体 CAD / CHT</span><small>SEPARATE SOLID</small></div>${solidAsset}<div class="form-field"><label for="solidMaterialSelect">固体材料</label><select id="solidMaterialSelect" data-bind="geometry.solid_material_id"><option value="" ${!geometry.solid_material_id ? 'selected' : ''}>選択してください</option>${options}</select></div><div class="button-row"><button type="button" class="button secondary compact" data-action="import-cad" data-cad-target="solid">◇ 固体 CAD を読み込む</button>${geometry.solid_asset_id ? '<button type="button" class="button ghost compact" data-action="clear-cad-asset" data-cad-target="solid">解除</button>' : ''}</div><small class="muted">流体 CAD は保持したまま、固体 CAD と材料を CHT の固体側として指定します。</small></div>`;
+  }
+
   function surfaceSelector() {
     const groups = surfaceGroups();
     if (!groups.length) return '<div class="property-section"><div class="section-title"><span>CAD 表面</span><small>SURFACE PATCH</small></div><div class="info-note">表面グループ情報が読み込まれると、面ごとの境界条件を選択できます。</div></div>';
@@ -722,13 +742,16 @@
     return `<div class="property-section"><div class="section-title"><span>CAD 表面を選択</span><small>${groups.length} PATCHES</small></div><div class="form-field"><label for="surfaceSelect">ハイライトする面</label><select id="surfaceSelect" data-action="select-surface"><option value="" ${!state.selectedSurface ? 'selected' : ''}>全表面</option>${options}</select></div><div class="info-note">選択した面は 3D ビューで黄色く表示されます。境界条件は面ごとに定義できます。</div></div>`;
   }
 
-  function cadAssetCard(geometry) {
-    const asset = geometry.asset_id;
-    const assetMeta = state.cadAssetMeta && (state.cadAssetMeta.id === asset || state.cadAssetMeta.asset_id === asset) ? state.cadAssetMeta : (typeof asset === 'object' ? asset : null);
-    const label = assetMeta?.original_name || assetMeta?.name || (typeof asset === 'string' ? asset : geometry.asset_id);
+  function cadAssetCard(geometry, target = 'fluid') {
+    const solid = target === 'solid';
+    const asset = solid ? geometry.solid_asset_id : geometry.asset_id;
+    const metadata = solid ? state.cadSolidAssetMeta : state.cadAssetMeta;
+    const assetMeta = metadata && (metadata.id === asset || metadata.asset_id === asset) ? metadata : (typeof asset === 'object' ? asset : null);
+    const label = assetMeta?.original_name || assetMeta?.name || (typeof asset === 'string' ? asset : asset);
     const bounds = extractBounds(assetMeta?.bounds || assetMeta?.bounding_box || assetMeta?.bounds_m);
     const boundsText = bounds ? `min [${bounds.min.map((value) => fmt(value, 6)).join(', ')}] m · max [${bounds.max.map((value) => fmt(value, 6)).join(', ')}] m` : 'サーバーに保存済み';
-    return `<div class="asset-card"><div class="asset-card-head"><strong>${esc(label)}</strong><span class="asset-kind">CAD</span></div><span>${esc(boundsText)}</span><span>asset_id: ${esc(assetMeta?.id || assetMeta?.asset_id || asset)}</span></div>`;
+    const roleLabel = solid ? 'SOLID CAD' : 'FLUID CAD';
+    return `<div class="asset-card cad-asset-card ${solid ? 'solid-asset-card' : 'fluid-asset-card'}"><div class="asset-card-head"><strong>${esc(label)}</strong><span class="asset-kind">${roleLabel}</span></div><span>${esc(boundsText)}</span><span>asset_id: ${esc(assetMeta?.id || assetMeta?.asset_id || asset)}</span></div>`;
   }
 
   const MATERIAL_KEYS = ['density', 'viscosity', 'heat_capacity', 'conductivity'];
@@ -1842,6 +1865,9 @@
     if (!['box', 'cad'].includes(geometry.kind)) messages.push({ level: 'error', text: 'ジオメトリタイプが不正です。' });
     if (geometry.kind === 'box' && size.length === 3 && size.some((value) => !Number.isFinite(Number(value)) || Number(value) <= 0)) messages.push({ level: 'error', text: 'ボックスの各辺は 0 より大きい値にしてください。' });
     if (geometry.kind === 'cad' && !geometry.asset_id) messages.push({ level: 'error', text: 'CAD ジオメトリにアセットが指定されていません。' });
+    if (geometry.solid_asset_id && geometry.kind !== 'cad') messages.push({ level: 'error', text: '固体 CAD アセットは CAD ジオメトリでのみ指定できます。' });
+    if (geometry.solid_asset_id && geometry.role !== 'fluid') messages.push({ level: 'error', text: 'ペアの固体 CAD アセットは流体役割の CAD ジオメトリでのみ使用できます。' });
+    if (geometry.solid_asset_id && !geometry.solid_material_id) messages.push({ level: 'error', text: '固体 CAD アセットの材料を指定してください。' });
     if (geometry.solid_material_id && !materialIds.has(geometry.solid_material_id)) messages.push({ level: 'error', text: 'CAD 固体材料が材料一覧にありません。' });
     if (Array.isArray(geometry.solids)) geometry.solids.forEach((solid, index) => {
       if (geometry.kind !== 'box' || geometry.role !== 'fluid') messages.push({ level: 'error', text: `固体領域 ${index + 1} はボックス流体領域でのみ定義できます。` });
@@ -2100,6 +2126,7 @@
 
   function handleChange(event) {
     const element = event.target;
+    if (element.id === 'cadTarget') updateCadTargetHint();
     if (element.matches('[data-bind]')) {
       updateBoundValue(element);
       if (element.dataset.bind === 'geometry.role' || element.dataset.bind === 'geometry.solid_material_id') renderInspector();
@@ -2343,10 +2370,11 @@
     if (action === 'import-project') $('#projectFile')?.click();
     if (action === 'select-geometry') selectNode('geometry');
     if (action === 'set-geometry-kind') setGeometryKind(element.dataset.kind);
-    if (action === 'import-cad') openCadDialog();
+    if (action === 'import-cad') openCadDialog(element.dataset.cadTarget || null);
     if (action === 'choose-cad-file') $('#cadFile')?.click();
     if (action === 'close-cad-dialog') closeDialog('cadDialog');
     if (action === 'confirm-cad-import') importCad();
+    if (action === 'clear-cad-asset') clearCadAsset(element.dataset.cadTarget || 'solid');
     if (action === 'build-mesh') buildMesh();
     if (action === 'run-simulation') startRun();
     if (action === 'restart-simulation') restartRun();
@@ -2530,14 +2558,34 @@
     }
   }
 
-  function openCadDialog() {
+  function updateCadTargetHint() {
+    const select = $('#cadTarget');
+    const hint = $('#cadTargetHint');
+    if (!select || !hint) return;
+    const hasFluid = Boolean(state.project?.geometry?.asset_id);
+    const solidOption = select.querySelector('option[value="solid"]');
+    if (solidOption) solidOption.disabled = !hasFluid;
+    if (select.value === 'solid' && !hasFluid) select.value = 'fluid';
+    state.cadImportTarget = select.value === 'solid' ? 'solid' : 'fluid';
+    hint.textContent = state.cadImportTarget === 'solid'
+      ? '流体側の CAD を保持したまま、固体側の CHT アセットを追加します。'
+      : '流体側の CAD アセットを置き換えます。固体側のアセットは保持されます。';
+  }
+
+  function openCadDialog(target = null) {
     const dialog = $('#cadDialog');
     if (!dialog) return;
+    const geometry = state.project?.geometry || {};
+    const defaultTarget = target || (geometry.kind === 'cad' && geometry.role === 'fluid' && geometry.asset_id ? 'solid' : 'fluid');
+    state.cadImportTarget = defaultTarget === 'solid' && geometry.asset_id ? 'solid' : 'fluid';
     state.cadFile = null;
     $('#cadFile').value = '';
     $('#cadFileName').textContent = '';
     $('#cadFileName').classList.add('hidden');
     $('#cadImportStatus').textContent = '';
+    const targetSelect = $('#cadTarget');
+    if (targetSelect) targetSelect.value = state.cadImportTarget;
+    updateCadTargetHint();
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else dialog.setAttribute('open', '');
   }
@@ -2549,28 +2597,51 @@
       return;
     }
     const unit = $('#cadUnit')?.value || 'mm';
+    const target = $('#cadTarget')?.value === 'solid' ? 'solid' : state.cadImportTarget === 'solid' ? 'solid' : 'fluid';
     const status = $('#cadImportStatus');
     status.textContent = 'アップロード中…';
     try {
+      if (target === 'solid' && !state.project.geometry.asset_id) {
+        throw new Error('固体 CAD を割り当てるには、先に流体 CAD を読み込んでください。');
+      }
       const metadata = await request(`/api/import?filename=${encodeURIComponent(file.name)}&unit=${encodeURIComponent(unit)}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file });
       const asset = metadata.asset || metadata;
+      const assetId = asset.id || asset.asset_id || null;
+      if (!assetId) throw new Error('CAD アセット ID が返されませんでした。');
       state.project.geometry.kind = 'cad';
-      state.project.geometry.asset_id = asset.id || asset.asset_id || null;
-      state.project.geometry.role = 'obstacle';
-      state.project.geometry.size = Array.isArray(asset.size) ? asset.size : state.project.geometry.size;
-      state.cadAssetMeta = asset;
+      if (target === 'solid') {
+        state.project.geometry.solid_asset_id = assetId;
+        if (!state.project.geometry.solid_material_id) state.project.geometry.solid_material_id = currentMaterial()?.id || null;
+        state.cadSolidAssetMeta = asset;
+      } else {
+        state.project.geometry.asset_id = assetId;
+        state.project.geometry.size = Array.isArray(asset.size) ? asset.size : state.project.geometry.size;
+        state.cadAssetMeta = asset;
+      }
       state.mesh = null;
       state.slice = null; state.resultControls = null;
       markDirty();
       closeDialog('cadDialog');
       renderTree(); renderInspector(); drawAll();
-      pushLog(`CAD「${file.name}」を読み込みました。アセット ID: ${state.project.geometry.asset_id || '—'}`);
-      toast('CAD を読み込みました。メッシュを生成してください。');
+      pushLog(`${target === 'solid' ? '固体 CAD' : '流体 CAD'}「${file.name}」を読み込みました。アセット ID: ${assetId}`);
+      toast(`${target === 'solid' ? '固体 CAD' : '流体 CAD'}を読み込みました。メッシュを生成してください。`);
     } catch (error) {
       status.textContent = error.message;
       pushLog(`CAD の読み込みに失敗しました: ${error.message}`, 'error');
       toast(`CAD の読み込みに失敗しました: ${error.message}`, 'error');
     }
+  }
+
+  function clearCadAsset(target = 'solid') {
+    if (!state.project?.geometry || target !== 'solid') return;
+    state.project.geometry.solid_asset_id = null;
+    state.cadSolidAssetMeta = null;
+    state.mesh = null;
+    state.slice = null;
+    state.resultControls = null;
+    markDirty();
+    renderTree(); renderInspector(); drawAll();
+    pushLog('固体 CAD アセットを解除しました。');
   }
 
   function serializableProject(project = state.project) {
@@ -2579,6 +2650,7 @@
       kind: project.geometry.kind,
       size: clone(project.geometry.size),
       asset_id: typeof project.geometry.asset_id === 'string' ? project.geometry.asset_id : null,
+      solid_asset_id: typeof project.geometry.solid_asset_id === 'string' ? project.geometry.solid_asset_id : null,
       role: project.geometry.role
     };
     // Preserve optional CAD computational-domain descriptors from imported
@@ -3469,11 +3541,18 @@
     const geometry = state.project?.geometry;
     if (!geometry) return { min: [-1, -1, -1], max: [1, 1, 1] };
     if (geometry.kind === 'box' && Array.isArray(geometry.size)) return { min: [0, 0, 0], max: geometry.size.map((value) => Math.max(numberOr(value, 1), 1e-9)) };
-    const meta = state.cadAssetMeta;
-    const bounds = extractBounds(meta?.bounds || meta?.bounding_box || meta?.bounds_m);
-    if (bounds) return bounds;
-    const vertices = meta?.vertices;
-    if (Array.isArray(vertices) && vertices.length) return calculateBounds(vertices);
+    const metadata = [state.cadAssetMeta, state.cadSolidAssetMeta];
+    const boundsList = metadata
+      .map((meta) => extractBounds(meta?.bounds || meta?.bounding_box || meta?.bounds_m))
+      .filter(Boolean);
+    if (boundsList.length) {
+      return {
+        min: [0, 1, 2].map((index) => Math.min(...boundsList.map((bounds) => bounds.min[index]))),
+        max: [0, 1, 2].map((index) => Math.max(...boundsList.map((bounds) => bounds.max[index])))
+      };
+    }
+    const vertices = metadata.flatMap((meta) => Array.isArray(meta?.vertices) ? meta.vertices : []);
+    if (vertices.length) return calculateBounds(vertices);
     return { min: [0, 0, 0], max: [0.06, 0.02, 0.02] };
   }
 
@@ -3489,26 +3568,52 @@
     return null;
   }
 
+  function cadSurfaceGeometry(metadata, fallbackPreview = null) {
+    const previewSurfacePoints = fallbackPreview?.vertices || fallbackPreview?.surface_vertices;
+    const previewSurfaceFaces = fallbackPreview?.faces || fallbackPreview?.surface_faces;
+    const surfacePoints = Array.isArray(metadata?.vertices) && metadata.vertices.length
+      ? metadata.vertices : (Array.isArray(previewSurfacePoints) ? previewSurfacePoints : []);
+    const surfaceFaces = Array.isArray(metadata?.faces) && metadata.faces.length
+      ? metadata.faces : (Array.isArray(previewSurfaceFaces) ? previewSurfaceFaces : []);
+    if (!surfacePoints.length) return null;
+    return {
+      points: surfacePoints.map(pointToArray).filter(Boolean),
+      faces: surfaceFaces,
+      meshPoints: Array.isArray(fallbackPreview?.points) ? fallbackPreview.points.map(pointToArray).filter(Boolean) : [],
+      source: 'cad'
+    };
+  }
+
   function geometryPoints() {
     const preview = state.mesh?.preview || state.mesh;
-    const cadSurface = state.cadAssetMeta;
-    const previewSurfacePoints = preview?.vertices || preview?.surface_vertices;
-    const previewSurfaceFaces = preview?.faces || preview?.surface_faces;
     const previewMeshPoints = preview?.points;
     if (state.project?.geometry?.kind === 'cad') {
-      // Mesh previews contain cell-centre samples (`points`) and separate
-      // surface vertices/faces.  Face indices always refer to the latter.
-      const surfacePoints = Array.isArray(cadSurface?.vertices) && cadSurface.vertices.length
-        ? cadSurface.vertices : (Array.isArray(previewSurfacePoints) ? previewSurfacePoints : []);
-      const surfaceFaces = Array.isArray(cadSurface?.faces) && cadSurface.faces.length
-        ? cadSurface.faces : (Array.isArray(previewSurfaceFaces) ? previewSurfaceFaces : []);
-      if (surfacePoints.length) return {
-        points: surfacePoints.map(pointToArray).filter(Boolean),
-        faces: surfaceFaces,
-        meshPoints: Array.isArray(previewMeshPoints) ? previewMeshPoints.map(pointToArray).filter(Boolean) : [],
-        source: 'cad'
-      };
-      if (Array.isArray(previewMeshPoints) && previewMeshPoints.length) return { points: previewMeshPoints.map(pointToArray).filter(Boolean), faces: [], source: 'mesh', meshPoints: [] };
+      // Keep the fluid and solid CAD surfaces as separate layers so their
+      // outlines remain visible when the two assets overlap.
+      const fluid = cadSurfaceGeometry(state.cadAssetMeta, preview);
+      const solid = cadSurfaceGeometry(state.cadSolidAssetMeta);
+      const layers = [];
+      if (fluid) layers.push({ ...fluid, role: 'fluid' });
+      if (solid) layers.push({ ...solid, role: 'solid' });
+      if (layers.length) {
+        return {
+          points: layers.flatMap((layer) => layer.points),
+          faces: fluid?.faces || [],
+          faceGroups: fluid?.faceGroups || [],
+          meshPoints: fluid?.meshPoints || [],
+          source: 'cad',
+          layers
+        };
+      }
+      const metadataBounds = [state.cadAssetMeta, state.cadSolidAssetMeta, preview]
+        .map((metadata) => extractBounds(metadata?.bounds || metadata?.bounding_box || metadata?.bounds_m))
+        .filter(Boolean);
+      if (metadataBounds.length) {
+        const min = [0, 1, 2].map((index) => Math.min(...metadataBounds.map((bounds) => bounds.min[index])));
+        const max = [0, 1, 2].map((index) => Math.max(...metadataBounds.map((bounds) => bounds.max[index])));
+        return { points: [[min[0], min[1], min[2]], [max[0], min[1], min[2]], [max[0], max[1], min[2]], [min[0], max[1], min[2]], [min[0], min[1], max[2]], [max[0], min[1], max[2]], [max[0], max[1], max[2]], [min[0], max[1], max[2]]], faces: [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]], source: 'cad', meshPoints: [], layers: [] };
+      }
+      if (Array.isArray(preview?.points) && preview.points.length) return { points: preview.points.map(pointToArray).filter(Boolean), faces: [], source: 'mesh', meshPoints: [] };
     }
     if (state.project?.geometry?.kind === 'box') {
       const bounds = modelBounds();
@@ -3580,32 +3685,54 @@
     ctx.fillStyle = background; ctx.fillRect(0, 0, width, height);
     if (state.showGrid) drawViewportGrid(ctx, width, height);
     const geometryData = geometryPoints();
-    const { points, faces, meshPoints = [], faceGroups = [], source = '' } = geometryData;
+    const { points, meshPoints = [] } = geometryData;
+    const layers = Array.isArray(geometryData.layers) && geometryData.layers.length
+      ? geometryData.layers : [{ ...geometryData, role: 'fluid' }];
     if (!points.length) return;
-    const bounds = calculateBounds(points);
+    const allLayerPoints = layers.flatMap((layer) => layer.points || []);
+    const bounds = calculateBounds(allLayerPoints.length ? allLayerPoints : points);
     const center = [0, 1, 2].map((index) => (bounds.min[index] + bounds.max[index]) / 2);
     const span = Math.max(...[0, 1, 2].map((index) => Math.abs(bounds.max[index] - bounds.min[index])), 1e-8);
     const scale = Math.min(width, height) * .60 / span * state.orbit.zoom;
-    const projected = points.map((point) => { const rotated = rotate3d(point, center); return [width / 2 + rotated[0] * scale, height / 2 - rotated[1] * scale, rotated[2]]; });
-    const faceList = faces.length ? faces : [];
-    const visibleFaces = faceList.map((face, faceIndex) => {
-      const indices = Array.isArray(face) ? face : (face?.indices || face?.vertices || []);
-      const valid = indices.map((index) => projected[index]).filter(Boolean);
-      const depth = valid.reduce((sum, point) => sum + point[2], 0) / Math.max(valid.length, 1);
-      return { indices, valid, depth, faceIndex };
-    }).filter((face) => face.valid.length >= 3).sort((a, b) => a.depth - b.depth);
-    const selectedTriangles = state.selectedSurface && source === 'box' ? triangleIndicesForSurface(state.selectedSurface, faceList.length) : new Set();
-    state.projectedFaces = visibleFaces.map((face) => {
-      const centroid = face.valid.reduce((result, point) => [result[0] + point[0], result[1] + point[1]], [0, 0]).map((value) => value / face.valid.length);
-      return { x: centroid[0], y: centroid[1], faceIndex: face.faceIndex, groupId: faceGroups[face.faceIndex] || surfaceGroupForTriangle(face.faceIndex, source), vertices: face.valid.map((point) => point.slice()) };
-    });
-    visibleFaces.forEach((face, index) => {
-      ctx.beginPath(); ctx.moveTo(face.valid[0][0], face.valid[0][1]); face.valid.slice(1).forEach((point) => ctx.lineTo(point[0], point[1])); ctx.closePath();
-      const opacity = state.mesh ? .13 + (index % 3) * .025 : .18;
-      const groupId = faceGroups[face.faceIndex] || surfaceGroupForTriangle(face.faceIndex, source);
-      const highlighted = selectedTriangles.has(face.faceIndex) || (Boolean(groupId) && groupId === state.selectedSurface);
-      ctx.fillStyle = highlighted ? 'rgba(247, 193, 82, .62)' : state.mesh ? `rgba(50, 209, 195, ${opacity})` : `rgba(79, 185, 233, ${opacity})`;
-      ctx.fill(); ctx.strokeStyle = highlighted ? 'rgba(255, 220, 123, .95)' : state.mesh ? 'rgba(77, 204, 212, .58)' : 'rgba(104, 184, 217, .8)'; ctx.lineWidth = highlighted ? 1.6 : 1; ctx.stroke();
+    state.projectedFaces = [];
+    layers.forEach((layer) => {
+      const layerPoints = layer.points || [];
+      const projected = layerPoints.map((point) => { const rotated = rotate3d(point, center); return [width / 2 + rotated[0] * scale, height / 2 - rotated[1] * scale, rotated[2]]; });
+      const faces = Array.isArray(layer.faces) ? layer.faces : [];
+      const faceGroups = layer.faceGroups || [];
+      const source = layer.source || '';
+      const faceList = faces.length ? faces : [];
+      const visibleFaces = faceList.map((face, faceIndex) => {
+        const indices = Array.isArray(face) ? face : (face?.indices || face?.vertices || []);
+        const valid = indices.map((index) => projected[index]).filter(Boolean);
+        const depth = valid.reduce((sum, point) => sum + point[2], 0) / Math.max(valid.length, 1);
+        return { indices, valid, depth, faceIndex };
+      }).filter((face) => face.valid.length >= 3).sort((a, b) => a.depth - b.depth);
+      const fluidLayer = layer.role !== 'solid';
+      const selectedTriangles = fluidLayer && state.selectedSurface && source === 'box' ? triangleIndicesForSurface(state.selectedSurface, faceList.length) : new Set();
+      if (fluidLayer) {
+        state.projectedFaces.push(...visibleFaces.map((face) => {
+          const centroid = face.valid.reduce((result, point) => [result[0] + point[0], result[1] + point[1]], [0, 0]).map((value) => value / face.valid.length);
+          return { x: centroid[0], y: centroid[1], faceIndex: face.faceIndex, groupId: faceGroups[face.faceIndex] || surfaceGroupForTriangle(face.faceIndex, source), vertices: face.valid.map((point) => point.slice()) };
+        }));
+      }
+      visibleFaces.forEach((face, index) => {
+        ctx.beginPath(); ctx.moveTo(face.valid[0][0], face.valid[0][1]); face.valid.slice(1).forEach((point) => ctx.lineTo(point[0], point[1])); ctx.closePath();
+        const opacity = layer.role === 'solid' ? .30 + (index % 3) * .035 : state.mesh ? .13 + (index % 3) * .025 : .18;
+        const groupId = faceGroups[face.faceIndex] || (fluidLayer ? surfaceGroupForTriangle(face.faceIndex, source) : null);
+        const highlighted = fluidLayer && (selectedTriangles.has(face.faceIndex) || (Boolean(groupId) && groupId === state.selectedSurface));
+        if (highlighted) {
+          ctx.fillStyle = 'rgba(247, 193, 82, .62)';
+          ctx.strokeStyle = 'rgba(255, 220, 123, .95)';
+        } else if (layer.role === 'solid') {
+          ctx.fillStyle = `rgba(234, 183, 101, ${opacity})`;
+          ctx.strokeStyle = 'rgba(246, 205, 113, .92)';
+        } else {
+          ctx.fillStyle = state.mesh ? `rgba(50, 209, 195, ${opacity})` : `rgba(79, 185, 233, ${opacity})`;
+          ctx.strokeStyle = state.mesh ? 'rgba(77, 204, 212, .58)' : 'rgba(104, 184, 217, .8)';
+        }
+        ctx.fill(); ctx.lineWidth = highlighted ? 1.6 : layer.role === 'solid' ? 1.25 : 1; ctx.stroke();
+      });
     });
     const projectedMesh = meshPoints.map((point) => { const rotated = rotate3d(point, center); return [width / 2 + rotated[0] * scale, height / 2 - rotated[1] * scale, rotated[2]]; });
     if (state.mesh && projectedMesh.length <= 4500) {

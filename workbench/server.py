@@ -77,10 +77,11 @@ class Store:
     def save(self, project, pid=None):
         project = validate_project(project)
         pid = identifier(pid) if pid else uuid.uuid4().hex
-        if project['geometry'].get('asset_id'):
-            asset = identifier(project['geometry']['asset_id'])
-            if not (self.assets / asset / 'metadata.json').exists():
-                raise ValueError('CAD asset does not exist; import the CAD file first.')
+        for field in ('asset_id', 'solid_asset_id'):
+            if project['geometry'].get(field):
+                asset = identifier(project['geometry'][field])
+                if not (self.assets / asset / 'metadata.json').exists():
+                    raise ValueError('CAD asset does not exist; import the CAD file first.')
         record = {'id': pid, 'project': project, 'updated_at': now()}
         with self.lock:
             atomic_json(self.projects / pid / 'project.json', record)
@@ -239,10 +240,14 @@ class Store:
         with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as z:
             z.writestr('manifest.json', json.dumps({'format':'xlb-workbench','version':1,'project_id':pid}))
             z.writestr('project.json', json.dumps(record['project'], ensure_ascii=False))
-            asset_ids = {record['project']['geometry'].get('asset_id')}
+            asset_ids = {
+                record['project']['geometry'].get('asset_id'),
+                record['project']['geometry'].get('solid_asset_id'),
+            }
             for run in record['runs']:
                 directory = self.runs / run['id']
-                asset_ids.add(read_json(directory/'input.json')['geometry'].get('asset_id'))
+                run_geometry = read_json(directory/'input.json')['geometry']
+                asset_ids.update({run_geometry.get('asset_id'), run_geometry.get('solid_asset_id')})
                 # Read the atomically published manifest before walking the
                 # run. Unpublished/stale files below frames are excluded so
                 # an export cannot expose a half-written transient frame.
@@ -328,11 +333,12 @@ class Store:
                     metadata['id'] = new
                     atomic_json(directory / 'metadata.json', metadata)
             def remap_project(p):
-                aid = p['geometry'].get('asset_id')
-                if aid:
-                    if aid not in mapping:
-                        raise ValueError('Archive is missing a referenced CAD asset')
-                    p['geometry']['asset_id'] = mapping[aid]
+                for field in ('asset_id', 'solid_asset_id'):
+                    aid = p['geometry'].get(field)
+                    if aid:
+                        if aid not in mapping:
+                            raise ValueError('Archive is missing a referenced CAD asset')
+                        p['geometry'][field] = mapping[aid]
                 return p
             project = remap_project(project)
             pid = uuid.uuid4().hex
@@ -409,12 +415,15 @@ def mesh_preview(mesh):
     solid = np.asarray(mesh.get('solid_mask', np.zeros_like(mask)), dtype=bool)
     solid_count, solid_cells = sampled_cells(solid)
     preview['solid_points'] = (origin + (solid_cells + .5) * spacing).tolist()
-    return {'shape': list(mask.shape), 'fluid_cells': fluid_count, 'total_cells': int(mask.size),
+    response = {'shape': list(mask.shape), 'fluid_cells': fluid_count, 'total_cells': int(mask.size),
             'solid_cells': solid_count, 'limits': configured_limits(),
             'boundary_link_counts': {key: int(np.count_nonzero(value))
                                      for key, value in mesh.get('boundary_links', {}).items()},
             'origin': origin.tolist(), 'spacing': spacing.tolist(), 'preview': preview,
             'warnings': mesh.get('warnings', [])}
+    if isinstance(mesh.get('geometry_metadata'), dict):
+        response['geometry_metadata'] = mesh['geometry_metadata']
+    return response
 
 
 def slice_result(directory, query):

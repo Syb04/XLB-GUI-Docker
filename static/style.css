@@ -196,6 +196,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .asset-card span { color: var(--text-faint); font: 10px var(--font-mono); overflow-wrap: anywhere; }
 .asset-card-head { display: flex; justify-content: space-between; align-items: center; }
 .asset-card-head .asset-kind { color: var(--teal); font: 9px var(--font-mono); }
+.cad-pair-section { border-top: 1px solid rgba(92, 210, 157, .18); }
+.cad-asset-card { border-left: 3px solid var(--teal); }
+.cad-asset-card.solid-asset-card { border-left-color: #eab765; background: rgba(234, 183, 101, .055); }
+.cad-asset-card.solid-asset-card .asset-kind { color: #eab765; }
 
 .property-card { border: 1px solid var(--line-soft); border-radius: 5px; padding: 8px; margin-bottom: 8px; background: rgba(6, 18, 24, .34); }
 .property-card:last-child { margin-bottom: 0; }

@@ -211,6 +211,7 @@
     <div class="modal-card narrow">
       <div class="modal-head"><div><span class="eyebrow">GEOMETRY IMPORT</span><h2 id="cadDialogTitle">CAD を読み込む</h2></div><button type="button" class="dialog-close" data-action="close-cad-dialog" aria-label="閉じる">×</button></div>
       <div class="drop-zone" id="cadDropZone"><div class="drop-zone-icon">◇</div><strong>STL / OBJ / STEP / IGES / BREP</strong><span>ファイルを選択、またはここにドロップ</span><input id="cadFile" type="file" accept=".stl,.obj,.step,.stp,.iges,.igs,.brep" hidden><button type="button" class="button secondary compact" data-action="choose-cad-file">ファイルを選択</button><div id="cadFileName" class="selected-file hidden"></div></div>
+      <div class="form-field"><label for="cadTarget">割り当て先</label><select id="cadTarget"><option value="fluid">流体 CAD（geometry.asset_id）</option><option value="solid">固体 CAD / CHT（geometry.solid_asset_id）</option></select><small id="cadTargetHint">流体側の CAD アセットを置き換えます。</small></div>
       <div class="form-field"><label for="cadUnit">入力単位</label><select id="cadUnit"><option value="m">m</option><option value="mm" selected>mm</option><option value="cm">cm</option><option value="in">in</option></select><small>インポート時に SI 単位（m）へ変換します。</small></div>
       <div class="modal-foot"><span id="cadImportStatus" class="muted"></span><button type="button" class="button ghost" data-action="close-cad-dialog">キャンセル</button><button type="button" class="button primary" data-action="confirm-cad-import">読み込む</button></div>
     </div>

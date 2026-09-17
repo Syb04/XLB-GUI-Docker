@@ -471,6 +471,7 @@ def default_project() -> dict[str, Any]:
             "kind": "box",
             "size": [0.06, 0.02, 0.02],
             "asset_id": None,
+            "solid_asset_id": None,
             "role": "fluid",
             "solids": [],
         },
@@ -552,7 +553,7 @@ def validate_project(project: Any) -> dict[str, Any]:
     _keys(
         geometry,
         {
-            "kind", "size", "asset_id", "role", "origin", "computational_box", "domain",
+            "kind", "size", "asset_id", "solid_asset_id", "role", "origin", "computational_box", "domain",
             "domain_size", "domain_origin", "box_size", "box_origin",
             "solid_material_id", "solids",
         },
@@ -577,12 +578,26 @@ def validate_project(project: Any) -> dict[str, Any]:
         _fail("geometry.asset_id is required for CAD geometry")
     if kind == "box" and asset_id is not None:
         _fail("geometry.asset_id is only valid for CAD geometry")
+    solid_asset_id = geometry.get("solid_asset_id")
+    if solid_asset_id is not None:
+        solid_asset_id = _identifier(solid_asset_id, "geometry.solid_asset_id")
+        if kind != "cad" or role != "fluid":
+            _fail("geometry.solid_asset_id is only valid for CAD fluid geometry")
+        if solid_asset_id == asset_id:
+            _fail("geometry.solid_asset_id must identify a separate CAD asset")
     origin = _vector(geometry["origin"], "geometry.origin") if "origin" in geometry else None
     solid_material_id = geometry.get("solid_material_id")
     if solid_material_id is not None:
         solid_material_id = _identifier(solid_material_id, "geometry.solid_material_id")
-        if role != "obstacle":
-            _fail("geometry.solid_material_id is only valid for obstacle geometry")
+        if role == "obstacle":
+            pass
+        elif kind == "cad" and role == "fluid":
+            if solid_asset_id is None:
+                _fail("geometry.solid_material_id requires geometry.solid_asset_id for CAD fluid geometry")
+        else:
+            _fail("geometry.solid_material_id is only valid for obstacle geometry or paired CAD fluid geometry")
+    if solid_asset_id is not None and solid_material_id is None:
+        _fail("geometry.solid_asset_id requires geometry.solid_material_id")
     raw_solids = geometry.get("solids", [])
     if isinstance(raw_solids, (str, bytes)) or not isinstance(raw_solids, list):
         _fail("geometry.solids must be an array")
@@ -601,6 +616,7 @@ def validate_project(project: Any) -> dict[str, Any]:
     if geometry_size is not None:
         normalized_geometry["size"] = geometry_size
     normalized_geometry["asset_id"] = asset_id
+    normalized_geometry["solid_asset_id"] = solid_asset_id
     normalized_geometry["role"] = role
     normalized_geometry["solids"] = solids
     if solid_material_id is not None:
