@@ -440,6 +440,54 @@ def _surface_status(vertices: np.ndarray, faces: np.ndarray) -> tuple[bool, bool
     return bool(mesh.is_watertight), bool(mesh.is_winding_consistent)
 
 
+def _repair_nonwatertight_surface(
+    vertices: np.ndarray,
+    faces: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Return a watertight MeshFix repair, or ``None`` when it is unsafe.
+
+    Some STEP exporters leave coincident facets or small cracks in an otherwise
+    valid volume.  MeshFix resolves those surface-topology defects before the
+    voxel classifier runs.  The repaired result is accepted only after the
+    same strict normalisation and watertightness checks as an ordinary import.
+    """
+
+    try:
+        import pymeshfix  # type: ignore
+        repair = pymeshfix.MeshFix(vertices, faces)
+        repair.repair(joincomp=True, remove_smallest_components=False)
+        repaired_vertices, repaired_faces = _normalise_surface(repair.points, repair.faces)
+        watertight, winding_consistent = _surface_status(repaired_vertices, repaired_faces)
+        if watertight and winding_consistent:
+            return repaired_vertices, repaired_faces
+    except Exception:
+        # Retain the original CAD surface and let the normal mesh validation
+        # report the problem when no conservative automatic repair is possible.
+        return None
+    return None
+
+
+def _remap_triangle_groups(
+    original_vertices: np.ndarray,
+    original_faces: np.ndarray,
+    original_groups: list[str],
+    repaired_vertices: np.ndarray,
+    repaired_faces: np.ndarray,
+) -> list[str]:
+    """Assign repaired facets to their nearest original CAD surface group."""
+
+    if len(original_groups) != len(original_faces):
+        return []
+    try:
+        from scipy.spatial import cKDTree
+        original_centres = original_vertices[original_faces].mean(axis=1)
+        repaired_centres = repaired_vertices[repaired_faces].mean(axis=1)
+        nearest = cKDTree(original_centres).query(repaired_centres, k=1)[1]
+        return [original_groups[int(index)] for index in np.asarray(nearest).reshape(-1)]
+    except Exception:
+        return []
+
+
 def _require_closed_surface(vertices: np.ndarray, faces: np.ndarray) -> None:
     watertight, winding_consistent = _surface_status(vertices, faces)
     if not watertight:
@@ -488,6 +536,33 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
         native_triangle_groups = [native_triangle_groups[int(index)] for index in kept_face_indices]
     bounds_array = np.asarray([vertices.min(axis=0), vertices.max(axis=0)], dtype=np.float64)
     watertight, winding_consistent = _surface_status(vertices, faces)
+    repair_metadata: dict[str, Any] = {
+        "attempted": False,
+        "applied": False,
+        "original_triangle_count": int(len(faces)),
+    }
+    if not (watertight and winding_consistent):
+        repair_metadata["attempted"] = True
+        original_vertices = vertices
+        original_faces = faces
+        original_groups = list(native_triangle_groups) if native_triangle_groups is not None else None
+        repaired = _repair_nonwatertight_surface(vertices, faces)
+        if repaired is None:
+            repair_metadata["reason"] = "no conservative watertight repair was produced"
+        else:
+            vertices, faces = repaired
+            watertight, winding_consistent = _surface_status(vertices, faces)
+            repair_metadata.update({
+                "applied": True,
+                "method": "pymeshfix",
+                "repaired_triangle_count": int(len(faces)),
+            })
+            if original_groups is not None:
+                remapped_groups = _remap_triangle_groups(
+                    original_vertices, original_faces, original_groups, vertices, faces
+                )
+                native_triangle_groups = remapped_groups if len(remapped_groups) == len(faces) else None
+    bounds_array = np.asarray([vertices.min(axis=0), vertices.max(axis=0)], dtype=np.float64)
     if native_triangle_groups is None:
         surface_groups, triangle_groups = _derive_surface_groups(vertices, faces)
     else:
@@ -519,6 +594,7 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
             "vertex_count": int(len(vertices)),
             "triangle_count": int(len(faces)),
             "duplicate_triangles_removed": duplicate_triangles_removed,
+            "surface_repair": repair_metadata,
             "vertices": vertices.tolist(),
             "faces": faces.tolist(),
             "bounds": bounds_array.tolist(),
@@ -564,6 +640,31 @@ def _asset_surface(asset_root: Path, asset_id: str) -> tuple[np.ndarray, np.ndar
     vertices, faces = _normalise_surface(vertices, faces, 1.0)
     raw_triangle_groups = metadata.get("triangle_groups")
     raw_surface_groups = metadata.get("surface_groups")
+    watertight, winding_consistent = _surface_status(vertices, faces)
+    legacy_repair: dict[str, Any] | None = None
+    if not (watertight and winding_consistent):
+        original_vertices, original_faces = vertices, faces
+        original_groups = (
+            [str(value) for value in raw_triangle_groups]
+            if isinstance(raw_triangle_groups, list) and len(raw_triangle_groups) == len(faces)
+            else []
+        )
+        repaired = _repair_nonwatertight_surface(vertices, faces)
+        if repaired is not None:
+            vertices, faces = repaired
+            watertight, winding_consistent = _surface_status(vertices, faces)
+            remapped_groups = _remap_triangle_groups(
+                original_vertices, original_faces, original_groups, vertices, faces
+            )
+            raw_triangle_groups = remapped_groups if len(remapped_groups) == len(faces) else None
+            legacy_repair = {
+                "attempted": True,
+                "applied": True,
+                "method": "pymeshfix",
+                "original_triangle_count": int(len(original_faces)),
+                "repaired_triangle_count": int(len(faces)),
+                "on_load": True,
+            }
     if isinstance(raw_triangle_groups, list) and len(raw_triangle_groups) == len(faces):
         triangle_groups = [str(value) for value in raw_triangle_groups]
         group_names = {
@@ -575,6 +676,17 @@ def _asset_surface(asset_root: Path, asset_id: str) -> tuple[np.ndarray, np.ndar
     else:
         surface_groups, triangle_groups = _derive_surface_groups(vertices, faces)
     metadata = dict(metadata)
+    if legacy_repair is not None:
+        # Assets imported before surface repair existed are upgraded in memory.
+        # Keeping the original source and NPZ intact makes this migration safe
+        # and lets a subsequent import persist the repaired representation.
+        metadata["surface_repair"] = legacy_repair
+        metadata["watertight"] = watertight
+        metadata["winding_consistent"] = winding_consistent
+        metadata["triangle_count"] = int(len(faces))
+        metadata["vertex_count"] = int(len(vertices))
+        metadata["bounds"] = np.asarray([vertices.min(axis=0), vertices.max(axis=0)]).tolist()
+        metadata["bounds_m"] = metadata["bounds"]
     metadata["surface_groups"] = surface_groups
     metadata["triangle_groups"] = triangle_groups
     return vertices, faces, metadata

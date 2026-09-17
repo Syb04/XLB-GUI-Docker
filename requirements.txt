@@ -10,6 +10,7 @@ jax==0.11.1
 jaxlib==0.11.1
 matplotlib==3.11.1
 pyvista==0.48.4
+pymeshfix==0.18.1
 numpy-stl==4.0.0
 pydantic==2.13.5
 nvtx==0.2.16

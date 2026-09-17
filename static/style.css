@@ -196,6 +196,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .asset-card { display: flex; flex-direction: column; gap: 4px; padding: 9px; margin-bottom: 9px; border: 1px solid var(--line-soft); border-radius: 5px; background: rgba(6, 18, 24, .4); }
 .asset-card strong { font-size: 11px; }
 .asset-card span { color: var(--text-faint); font: 10px var(--font-mono); overflow-wrap: anywhere; }
+.asset-card .asset-repair-note { color: var(--amber); }
 .asset-card-head { display: flex; justify-content: space-between; align-items: center; }
 .asset-card-head .asset-kind { color: var(--teal); font: 9px var(--font-mono); }
 .cad-pair-section { border-top: 1px solid rgba(92, 210, 157, .18); }

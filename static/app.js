@@ -751,7 +751,9 @@
     const bounds = extractBounds(assetMeta?.bounds || assetMeta?.bounding_box || assetMeta?.bounds_m);
     const boundsText = bounds ? `min [${bounds.min.map((value) => fmt(value, 6)).join(', ')}] m · max [${bounds.max.map((value) => fmt(value, 6)).join(', ')}] m` : 'サーバーに保存済み';
     const roleLabel = solid ? 'SOLID CAD' : 'FLUID CAD';
-    return `<div class="asset-card cad-asset-card ${solid ? 'solid-asset-card' : 'fluid-asset-card'}"><div class="asset-card-head"><strong>${esc(label)}</strong><span class="asset-kind">${roleLabel}</span></div><span>${esc(boundsText)}</span><span>asset_id: ${esc(assetMeta?.id || assetMeta?.asset_id || asset)}</span></div>`;
+    const repair = assetMeta?.surface_repair;
+    const repairText = repair?.applied ? `表面修復済み: ${repair.original_triangle_count} → ${repair.repaired_triangle_count} triangles` : '';
+    return `<div class="asset-card cad-asset-card ${solid ? 'solid-asset-card' : 'fluid-asset-card'}"><div class="asset-card-head"><strong>${esc(label)}</strong><span class="asset-kind">${roleLabel}</span></div><span>${esc(boundsText)}</span>${repairText ? `<span class="asset-repair-note">${esc(repairText)}</span>` : ''}<span>asset_id: ${esc(assetMeta?.id || assetMeta?.asset_id || asset)}</span></div>`;
   }
 
   const MATERIAL_KEYS = ['density', 'viscosity', 'heat_capacity', 'conductivity'];

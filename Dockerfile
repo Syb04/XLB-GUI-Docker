@@ -5,10 +5,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git libglu1-mesa libgl1 libgomp1 libxrender1 libxcursor1 libxinerama1 libsm6 libxext6 libxft2 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
+ARG JAX_CUDA=0
+# Keep the large CUDA runtime layer independent of application dependencies.
+# Geometry-library updates then reuse it during normal image rebuilds.
+RUN if [ "$JAX_CUDA" = "1" ]; then pip install --no-cache-dir 'jax[cuda12]==0.11.1'; fi
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-ARG JAX_CUDA=0
-RUN if [ "$JAX_CUDA" = "1" ]; then pip install --no-cache-dir 'jax[cuda12]==0.11.1'; fi
 RUN useradd --create-home --uid 10001 workbench \
     && mkdir -p /data /home/workbench/.cache \
     && chown -R workbench:workbench /data /home/workbench
