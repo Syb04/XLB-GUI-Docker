@@ -2,9 +2,26 @@ param(
     [switch]$Gpu,
     [switch]$LocalData,
     [string]$Distro = 'Ubuntu-24.04',
-    [ValidateRange(1024,65535)][int]$Port = 8766
+    [ValidateRange(1024,65535)][int]$Port = 8766,
+    [switch]$NoWslKeepAlive
 )
 $ErrorActionPreference = 'Stop'
+
+function Start-WslKeepAlive {
+    param([string]$TargetDistro)
+    if ($NoWslKeepAlive) { return }
+
+    # WSL may shut down a distro after the launching shell exits, even while its
+    # systemd-managed Docker daemon is serving a container.  Keep one harmless
+    # process attached to the distro so the published localhost port remains up.
+    $alreadyRunning = Get-CimInstance Win32_Process -Filter "Name='wsl.exe'" |
+        Where-Object { $_.CommandLine -match [regex]::Escape("-d $TargetDistro") -and $_.CommandLine -match 'sleep infinity' }
+    if (-not $alreadyRunning) {
+        Start-Process -FilePath 'wsl.exe' -ArgumentList @('-d', $TargetDistro, '-u', 'root', '--', 'sleep', 'infinity') -WindowStyle Hidden | Out-Null
+    }
+}
+
+Start-WslKeepAlive -TargetDistro $Distro
 $composeArgs = @('compose', '-f', 'compose.yaml')
 if ($Gpu) { $composeArgs += @('-f', 'compose.gpu.yaml') }
 if ($LocalData) { $composeArgs += @('-f', 'compose.local.yaml') }
