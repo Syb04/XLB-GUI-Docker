@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "name": "加熱矩形流路",
+  "geometry": {
+    "kind": "box",
+    "size": [
+      0.06,
+      0.02,
+      0.02
+    ],
+    "asset_id": null,
+    "role": "fluid"
+  },
+  "materials": [
+    {
+      "id": "water",
+      "name": "Water",
+      "density": {
+        "kind": "constant",
+        "value": 998.0
+      },
+      "viscosity": {
+        "kind": "constant",
+        "value": 0.001
+      },
+      "heat_capacity": {
+        "kind": "constant",
+        "value": 4182.0
+      },
+      "conductivity": {
+        "kind": "constant",
+        "value": 0.6
+      }
+    }
+  ],
+  "physics": {
+    "flow": true,
+    "thermal": true,
+    "material_id": "water",
+    "initial_temperature": 293.15
+  },
+  "boundaries": [
+    {
+      "id": "inlet",
+      "name": "Inlet",
+      "face": "xmin",
+      "flow": {
+        "type": "velocity",
+        "velocity": [
+          0.01,
+          0.0,
+          0.0
+        ]
+      },
+      "thermal": {
+        "type": "temperature",
+        "value": 293.15
+      }
+    },
+    {
+      "id": "outlet",
+      "name": "Outlet",
+      "face": "xmax",
+      "flow": {
+        "type": "pressure",
+        "value": 0.0
+      },
+      "thermal": {
+        "type": "adiabatic"
+      }
+    },
+    {
+      "id": "heated-wall",
+      "name": "Heated wall",
+      "face": "zmax",
+      "flow": {
+        "type": "wall"
+      },
+      "thermal": {
+        "type": "heat_flux",
+        "value": 1000.0
+      }
+    }
+  ],
+  "mesh": {
+    "cells": [
+      30,
+      10,
+      10
+    ]
+  },
+  "study": {
+    "steps": 200,
+    "output_interval": 20,
+    "dt": 0.01,
+    "device": "cpu"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "end_step": 5,
+  "additional_steps": 2,
+  "device": "cuda:0",
+  "start_step": 3,
+  "continued_run": "507356a1ecb3478f9301575611626be2",
+  "restart": {
+    "available": true,
+    "step": 5,
+    "dt": 0.001,
+    "time": 0.005
+  },
+  "source_run": "9b011f601caf4b72b5f9270de14acb45",
+  "project_id": "61ce48074bfa4660b8ac6124c0df154d",
+  "status": "completed",
+  "ui_verified": true
+}

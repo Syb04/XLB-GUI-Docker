@@ -1,0 +1,81 @@
+{
+  "steps": 1500,
+  "expected_dp_dz_pa_m": -100.0,
+  "measured_dp_dz_pa_m": -99.93667098737902,
+  "relative_error": 0.0006332901262098289,
+  "maximum_speed_m_s": 1.9406297724344768e-06,
+  "z_m": [
+    0.0025,
+    0.0075,
+    0.0125,
+    0.0175,
+    0.0225,
+    0.0275,
+    0.0325,
+    0.0375
+  ],
+  "pressure_pa": [
+    1.8102115392684937,
+    1.3104950189590454,
+    0.8109956979751587,
+    0.31124797463417053,
+    -0.18853074312210083,
+    -0.6882320046424866,
+    -1.1878397464752197,
+    -1.6875407695770264
+  ],
+  "diagnostics": {
+    "backend": "XLB D3Q27 BGK via JAX",
+    "gravity": {
+      "enabled": true,
+      "mode": "uniform",
+      "vector": [
+        0.0,
+        0.0,
+        -0.1
+      ],
+      "reference_temperature": 300.0,
+      "active": true,
+      "reference_density_kg_m3": 1000.0,
+      "force_scheme": "Guo D3Q27 with half-step velocity correction"
+    },
+    "pressure_kind": "gauge",
+    "compute_backend": "device",
+    "device": "cpu",
+    "device_actual": "cpu:0",
+    "jax_matmul_precision": "highest",
+    "velocity_set": "D3Q27",
+    "collision": "BGK",
+    "tau_min": 0.62,
+    "tau_max": 0.62,
+    "mach_max": 6.722539751535805e-07,
+    "thermal_fourier_max": 0.0,
+    "thermal_robin_loss_max": 0.0,
+    "thermal_loss_coefficient_max": 0.0,
+    "temperature_residual": 0.0,
+    "eddy_viscosity_max_m2_s": 0.0,
+    "turbulent_conductivity_max_w_m_k": 0.0,
+    "turbulence_model": "laminar",
+    "smagorinsky_constant": 0.17,
+    "turbulent_prandtl": 0.9,
+    "flow_cells": 256,
+    "solid_cells": 0,
+    "thermal_cells": 256,
+    "rho_reference_kg_m3": 1000.0,
+    "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+    "thermal_backend": "disabled",
+    "les_backend": "disabled (laminar)",
+    "property_backend": "JAX material evaluator on device",
+    "full_field_transfers": 1,
+    "snapshot_count": 0,
+    "snapshot_bytes": 0,
+    "device_scalar_transfers": 18081,
+    "timings": {
+      "first_step_s": 0.8384813500160817,
+      "warm_compute_s": 4.57933002783102,
+      "save_s": 0.012261697003850713,
+      "snapshots_s": 0.0
+    },
+    "warnings": []
+  }
+}

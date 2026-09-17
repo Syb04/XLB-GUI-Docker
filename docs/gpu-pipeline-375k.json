@@ -1,0 +1,292 @@
+{
+  "purpose": "Same RTX3060/input; warm progress intervals include scalar checks and output summaries. Not turbulence accuracy validation.",
+  "total_cells": 375000,
+  "warm_step_speedup": 6.280246041111052,
+  "end_to_end_speedup": 1.3309169725380758,
+  "fields": {
+    "temperature": {
+      "max_absolute_difference": 6.103515625e-05
+    },
+    "velocity": {
+      "max_absolute_difference": 4.082927489434951e-07
+    },
+    "pressure": {
+      "max_absolute_difference": 0.00017766316886991262
+    },
+    "eddy_viscosity": {
+      "max_absolute_difference": 3.670138845612847e-12
+    }
+  },
+  "before": {
+    "cells": [
+      150,
+      50,
+      50
+    ],
+    "total_cells": 375000,
+    "mesh_seconds": 0.005752561002736911,
+    "simulate_including_output_seconds": 22.853137213998707,
+    "first_progress_interval_seconds": 4.358256346007693,
+    "warm_seconds_per_step": 0.34181271748550773,
+    "process_peak_rss_mib": 1344.44140625,
+    "samples": [
+      {
+        "step": 0,
+        "progress": 0.0,
+        "residual": 0.0,
+        "temperature_min": 293.15,
+        "temperature_max": 293.15,
+        "elapsed_seconds": 4.16423978099192
+      },
+      {
+        "step": 5,
+        "progress": 0.125,
+        "residual": 0.999999925494345,
+        "temperature_min": 293.15,
+        "temperature_max": 301.23166145727635,
+        "elapsed_seconds": 8.522496126999613
+      },
+      {
+        "step": 10,
+        "progress": 0.25,
+        "residual": 0.6763069486548037,
+        "temperature_min": 293.15,
+        "temperature_max": 306.99216001098625,
+        "elapsed_seconds": 10.172202756992192
+      },
+      {
+        "step": 15,
+        "progress": 0.375,
+        "residual": 0.6693660542255818,
+        "temperature_min": 293.15,
+        "temperature_max": 311.14896253550387,
+        "elapsed_seconds": 11.66513283799577
+      },
+      {
+        "step": 20,
+        "progress": 0.5,
+        "residual": 0.6264665796950728,
+        "temperature_min": 293.15,
+        "temperature_max": 314.19544461547156,
+        "elapsed_seconds": 13.37197197099158
+      },
+      {
+        "step": 25,
+        "progress": 0.625,
+        "residual": 0.5868028135972858,
+        "temperature_min": 293.15,
+        "temperature_max": 316.46873271041795,
+        "elapsed_seconds": 15.284359256998869
+      },
+      {
+        "step": 30,
+        "progress": 0.75,
+        "residual": 0.5757374710734486,
+        "temperature_min": 293.15,
+        "temperature_max": 318.19880830596674,
+        "elapsed_seconds": 17.030489138996927
+      },
+      {
+        "step": 35,
+        "progress": 0.875,
+        "residual": 0.5745892089499918,
+        "temperature_min": 293.15,
+        "temperature_max": 319.54286778980065,
+        "elapsed_seconds": 18.78881579899462
+      },
+      {
+        "step": 40,
+        "progress": 1.0,
+        "residual": 0.5697314312027935,
+        "temperature_min": 293.15,
+        "temperature_max": 320.60887970221916,
+        "elapsed_seconds": 20.485941238992382
+      }
+    ],
+    "result": {
+      "status": "completed",
+      "steps": 40,
+      "converged": false,
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "device": "cuda:0",
+        "device_actual": "cuda:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5187875758179796,
+        "tau_max": 0.5214147779453936,
+        "mach_max": 0.043301299870225574,
+        "thermal_fourier_max": 0.023950767803711574,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.1673709157303749,
+        "temperature_residual": 0.003985949500535009,
+        "eddy_viscosity_max_m2_s": 1.4011748240495948e-07,
+        "turbulent_conductivity_max_w_m_k": 0.6497770764385615,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 325000,
+        "solid_cells": 50000,
+        "thermal_cells": 375000,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "NumPy finite-volume on host",
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+          "thermal advection/diffusion uses an explicit NumPy finite-volume update on the host"
+        ]
+      }
+    },
+    "source_sha256": {
+      "solver.py": "1bcfa0514b22cc5eb3acab38e28934e5d36aa877ca533de0c8b291dea6c5022e",
+      "limits.py": "28db1f1ea581443b53bd2bde520ecae1e81a991e4ae810e468ea0a89ad5cd13e",
+      "__init__.py": "c820b473aa0370059c6a6a2cd1ef4ccc9426e0560263cd588a408166d38f5e51",
+      "schema.py": "337478d91650cf3b96eff2f0aaef96812a818258a66e7c3d4896c268a8270e07",
+      "geometry.py": "8877e253a05407facec3b70cb2d9772c356355082d1384014eb0f85b28da1b02",
+      "server.py": "b44bd4f9b55df2ab8babd4c1b2f2eb56ac520d29b098458e5c9831b9b29ea7f4"
+    }
+  },
+  "after": {
+    "cells": [
+      150,
+      50,
+      50
+    ],
+    "total_cells": 375000,
+    "mesh_seconds": 0.0032821619970491156,
+    "simulate_including_output_seconds": 17.17097135700169,
+    "first_progress_interval_seconds": 5.545303417995456,
+    "warm_seconds_per_step": 0.054426644314246785,
+    "process_peak_rss_mib": 1375.44140625,
+    "samples": [
+      {
+        "step": 0,
+        "progress": 0.0,
+        "residual": 0.0,
+        "temperature_min": 293.15,
+        "temperature_max": 293.15,
+        "elapsed_seconds": 7.155498974010698
+      },
+      {
+        "step": 5,
+        "progress": 0.125,
+        "residual": 1.0,
+        "temperature_min": 293.15,
+        "temperature_max": 301.23166145727635,
+        "elapsed_seconds": 12.700802392006153
+      },
+      {
+        "step": 10,
+        "progress": 0.25,
+        "residual": 0.6763139367103577,
+        "temperature_min": 293.15,
+        "temperature_max": 306.99216001098625,
+        "elapsed_seconds": 13.088331219012616
+      },
+      {
+        "step": 15,
+        "progress": 0.375,
+        "residual": 0.6693788170814514,
+        "temperature_min": 293.15,
+        "temperature_max": 311.14896253550387,
+        "elapsed_seconds": 13.320938194010523
+      },
+      {
+        "step": 20,
+        "progress": 0.5,
+        "residual": 0.6264752745628357,
+        "temperature_min": 293.15,
+        "temperature_max": 314.19544461547156,
+        "elapsed_seconds": 13.575806236010976
+      },
+      {
+        "step": 25,
+        "progress": 0.625,
+        "residual": 0.5868166089057922,
+        "temperature_min": 293.15,
+        "temperature_max": 316.46873271041795,
+        "elapsed_seconds": 13.85911519700312
+      },
+      {
+        "step": 30,
+        "progress": 0.75,
+        "residual": 0.5757591724395752,
+        "temperature_min": 293.15,
+        "temperature_max": 318.19880830596674,
+        "elapsed_seconds": 14.098494995007059
+      },
+      {
+        "step": 35,
+        "progress": 0.875,
+        "residual": 0.5745953321456909,
+        "temperature_min": 293.15,
+        "temperature_max": 319.54286778980065,
+        "elapsed_seconds": 14.348108509002486
+      },
+      {
+        "step": 40,
+        "progress": 1.0,
+        "residual": 0.5697487592697144,
+        "temperature_min": 293.15,
+        "temperature_max": 320.60887970221916,
+        "elapsed_seconds": 14.60573494300479
+      }
+    ],
+    "result": {
+      "status": "completed",
+      "steps": 40,
+      "converged": false,
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "compute_backend": "device",
+        "device": "cuda:0",
+        "device_actual": "cuda:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5187875763948389,
+        "tau_max": 0.5214147779707167,
+        "mach_max": 0.043301306664943695,
+        "thermal_fourier_max": 0.023950767803711574,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.1673709157303749,
+        "temperature_residual": 0.003985949500535009,
+        "eddy_viscosity_max_m2_s": 1.4011748375552032e-07,
+        "turbulent_conductivity_max_w_m_k": 0.6497770827016164,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 325000,
+        "solid_cells": 50000,
+        "thermal_cells": 375000,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "JAX finite-volume on device",
+        "les_backend": "JAX Smagorinsky device operator",
+        "property_backend": "JAX material evaluator on device",
+        "full_field_transfers": 1,
+        "device_scalar_transfers": 676,
+        "timings": {
+          "first_step_s": 5.059497235008166,
+          "warm_compute_s": 1.8043924759258516,
+          "save_s": 2.54506974099786
+        },
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+          "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+        ]
+      }
+    },
+    "source_sha256": {
+      "solver.py": "4d96cf6ade83c1a7d23d12d999cd30a87eb2b676e663a0eb2da7f31b3c712b6b",
+      "limits.py": "28db1f1ea581443b53bd2bde520ecae1e81a991e4ae810e468ea0a89ad5cd13e",
+      "__init__.py": "c820b473aa0370059c6a6a2cd1ef4ccc9426e0560263cd588a408166d38f5e51",
+      "fields_jax.py": "45ca5c123e61ec2a61ee8e75845b73ad8fb57604ed64a261f6e64d6f4d8c0be9",
+      "schema.py": "337478d91650cf3b96eff2f0aaef96812a818258a66e7c3d4896c268a8270e07",
+      "geometry.py": "8877e253a05407facec3b70cb2d9772c356355082d1384014eb0f85b28da1b02",
+      "server.py": "8db1eb18d9936754098dbd2b33de427c461760229c87576e83ad4e2d5ac477b0",
+      "thermal_jax.py": "eab09e7213b2bf49136f851025ed99595b143dd951866b862727ce7bbff165af"
+    }
+  }
+}

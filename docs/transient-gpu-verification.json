@@ -1,0 +1,2133 @@
+{
+  "purpose": "Real CUDA transient LES + CHT snapshot verification against the CPU reference path",
+  "image": "xlb-workbench:0.1.0-cuda",
+  "runtime": {
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+    "python": "3.12.14",
+    "jax": {
+      "version": "0.11.1",
+      "devices": [
+        "cuda:0"
+      ],
+      "gpu_devices": [
+        "cuda:0"
+      ]
+    },
+    "workbench_source": "/app/workbench mounted read-only",
+    "server": "direct simulate call; port 8766 untouched"
+  },
+  "case": {
+    "study": {
+      "steps": 7,
+      "output_interval": 1,
+      "snapshot_interval": 2,
+      "dt": 0.001,
+      "device": "cuda:0"
+    },
+    "snapshot_steps": [
+      0,
+      2,
+      4,
+      6,
+      7
+    ],
+    "project": {
+      "schema_version": 1,
+      "name": "Transient LES + CHT snapshot verification",
+      "geometry": {
+        "kind": "box",
+        "size": [
+          0.04,
+          0.02,
+          0.02
+        ],
+        "asset_id": null,
+        "role": "fluid",
+        "solids": [
+          {
+            "id": "aluminum-insert",
+            "name": "Internal aluminum CHT insert",
+            "origin": [
+              0.012,
+              0.005,
+              0.005
+            ],
+            "size": [
+              0.01,
+              0.01,
+              0.01
+            ],
+            "material_id": "aluminum"
+          }
+        ],
+        "origin": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "materials": [
+        {
+          "id": "water",
+          "name": "Water",
+          "density": {
+            "kind": "constant",
+            "value": 998.0
+          },
+          "viscosity": {
+            "kind": "constant",
+            "value": 0.001
+          },
+          "heat_capacity": {
+            "kind": "constant",
+            "value": 4182.0
+          },
+          "conductivity": {
+            "kind": "constant",
+            "value": 0.6
+          }
+        },
+        {
+          "id": "aluminum",
+          "name": "Aluminum",
+          "density": {
+            "kind": "constant",
+            "value": 2700.0
+          },
+          "viscosity": {
+            "kind": "constant",
+            "value": 0.001
+          },
+          "heat_capacity": {
+            "kind": "constant",
+            "value": 900.0
+          },
+          "conductivity": {
+            "kind": "constant",
+            "value": 16.0
+          }
+        }
+      ],
+      "physics": {
+        "flow": true,
+        "thermal": true,
+        "material_id": "water",
+        "initial_temperature": 300.0,
+        "turbulence": {
+          "model": "smagorinsky",
+          "smagorinsky_constant": 0.17,
+          "turbulent_prandtl": 0.9
+        }
+      },
+      "boundaries": [
+        {
+          "id": "inlet",
+          "name": "Inlet",
+          "face": "xmin",
+          "flow": {
+            "type": "velocity",
+            "velocity": [
+              0.01,
+              0.0,
+              0.0
+            ]
+          },
+          "thermal": {
+            "type": "temperature",
+            "value": 305.0
+          }
+        },
+        {
+          "id": "outlet",
+          "name": "Outlet",
+          "face": "xmax",
+          "flow": {
+            "type": "pressure",
+            "value": 0.0
+          },
+          "thermal": {
+            "type": "adiabatic"
+          }
+        },
+        {
+          "id": "heated-wall",
+          "name": "Heated wall",
+          "face": "zmax",
+          "flow": {
+            "type": "wall"
+          },
+          "thermal": {
+            "type": "temperature",
+            "value": 330.0
+          }
+        }
+      ],
+      "mesh": {
+        "cells": [
+          8,
+          4,
+          4
+        ]
+      },
+      "study": {
+        "steps": 7,
+        "output_interval": 1,
+        "snapshot_interval": 2,
+        "dt": 0.001,
+        "device": "cuda:0"
+      }
+    },
+    "mesh": {
+      "shape": [
+        8,
+        4,
+        4
+      ],
+      "total_cells": 128,
+      "fluid_cells": 120,
+      "solid_cells": 8,
+      "thermal_cells": 128,
+      "origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spacing": [
+        0.005,
+        0.005,
+        0.005
+      ],
+      "material_indices": [
+        0,
+        1
+      ],
+      "boundary_link_counts": {
+        "xmin": 16,
+        "xmax": 16,
+        "ymin": 32,
+        "ymax": 32,
+        "zmin": 32,
+        "zmax": 32
+      }
+    }
+  },
+  "cuda_main": {
+    "result": {
+      "status": "completed",
+      "steps": 7,
+      "converged": false,
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "compute_backend": "device",
+        "device": "cuda:0",
+        "device_actual": "cuda:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5001209288698851,
+        "tau_max": 0.5003374322390679,
+        "mach_max": 0.0034641016151377548,
+        "thermal_fourier_max": 0.00026337448559670784,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.0010349951458565963,
+        "temperature_residual": 5.1789027453510095e-05,
+        "eddy_viscosity_max_m2_s": 1.809931317550188e-06,
+        "turbulent_conductivity_max_w_m_k": 8.393327227172106,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 120,
+        "solid_cells": 8,
+        "thermal_cells": 128,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "JAX finite-volume on device",
+        "les_backend": "JAX Smagorinsky device operator",
+        "property_backend": "JAX material evaluator on device",
+        "full_field_transfers": 5,
+        "snapshot_count": 5,
+        "snapshot_bytes": 23508,
+        "device_scalar_transfers": 203,
+        "timings": {
+          "first_step_s": 2.6297326690109912,
+          "warm_compute_s": 0.24978049601486418,
+          "save_s": 0.15844649900100194,
+          "snapshots_s": 0.5990499069885118
+        },
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+          "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+        ]
+      }
+    },
+    "progress": [
+      {
+        "step": 0,
+        "progress": 0.0,
+        "residual": 0.0,
+        "temperature_min": 300.0,
+        "temperature_max": 300.0
+      },
+      {
+        "step": 1,
+        "progress": 0.14285714285714285,
+        "residual": 1.0,
+        "temperature_min": 300.0,
+        "temperature_max": 300.0104024748058
+      },
+      {
+        "step": 2,
+        "progress": 0.2857142857142857,
+        "residual": 0.5005313754081726,
+        "temperature_min": 300.0,
+        "temperature_max": 300.02713698338744
+      },
+      {
+        "step": 3,
+        "progress": 0.42857142857142855,
+        "residual": 0.17655162513256073,
+        "temperature_min": 300.0,
+        "temperature_max": 300.0416469553793
+      },
+      {
+        "step": 4,
+        "progress": 0.5714285714285714,
+        "residual": 0.10301131755113602,
+        "temperature_min": 300.0,
+        "temperature_max": 300.05672918455014
+      },
+      {
+        "step": 5,
+        "progress": 0.7142857142857143,
+        "residual": 0.10878937691450119,
+        "temperature_min": 300.0,
+        "temperature_max": 300.0715833451619
+      },
+      {
+        "step": 6,
+        "progress": 0.8571428571428571,
+        "residual": 0.07169292122125626,
+        "temperature_min": 300.0,
+        "temperature_max": 300.08643709322155
+      },
+      {
+        "step": 7,
+        "progress": 1.0,
+        "residual": 0.08725569397211075,
+        "temperature_min": 300.0,
+        "temperature_max": 300.1016928416914
+      }
+    ],
+    "verification": {
+      "directory": "/output/verified/cuda_les_cht_snapshots",
+      "frame_steps": [
+        0,
+        2,
+        4,
+        6,
+        7
+      ],
+      "frame_count": 5,
+      "frames": [
+        {
+          "step": 0,
+          "time": 0.0,
+          "file": "step_000000000.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0,
+              "max_abs": 0.0
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0,
+              "max_abs": 0.0
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.0,
+              "mean": 300.0,
+              "max_abs": 300.0
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0,
+              "max_abs": 0.0
+            }
+          }
+        },
+        {
+          "step": 2,
+          "time": 0.002,
+          "file": "step_000000002.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.0008344115922227502,
+              "max": 0.009999898262321949,
+              "mean": 0.0005919136456213892,
+              "max_abs": 0.009999898262321949
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.008922815322875977,
+              "max": 8.32597827911377,
+              "mean": 0.8689831495285034,
+              "max_abs": 8.32597827911377
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.0271301269531,
+              "mean": 300.0030517578125,
+              "max_abs": 300.0271301269531
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 1.3405536947175278e-06,
+              "mean": 3.1735811489852495e-07,
+              "max_abs": 1.3405536947175278e-06
+            }
+          }
+        },
+        {
+          "step": 4,
+          "time": 0.004,
+          "file": "step_000000004.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.0015987309161573648,
+              "max": 0.009999959729611874,
+              "mean": 0.0006013005622662604,
+              "max_abs": 0.009999959729611874
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.010409951210021973,
+              "max": 22.839433670043945,
+              "mean": 3.196234703063965,
+              "max_abs": 22.839433670043945
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.0567321777344,
+              "mean": 300.00634765625,
+              "max_abs": 300.0567321777344
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 1.5034321450002608e-06,
+              "mean": 3.6134287029199186e-07,
+              "max_abs": 1.5034321450002608e-06
+            }
+          }
+        },
+        {
+          "step": 6,
+          "time": 0.006,
+          "file": "step_000000006.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.0015345902647823095,
+              "max": 0.009999959729611874,
+              "mean": 0.0006108121597208083,
+              "max_abs": 0.009999959729611874
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.8099933862686157,
+              "max": 29.467103958129883,
+              "mean": 4.646265506744385,
+              "max_abs": 29.467103958129883
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.08642578125,
+              "mean": 300.00970458984375,
+              "max_abs": 300.08642578125
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 1.718393036753696e-06,
+              "mean": 3.8734782492610975e-07,
+              "max_abs": 1.718393036753696e-06
+            }
+          }
+        },
+        {
+          "step": 7,
+          "time": 0.007,
+          "file": "step_000000007.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.0011374664027243853,
+              "max": 0.009999959729611874,
+              "mean": 0.0005733903963118792,
+              "max_abs": 0.009999959729611874
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.5095919370651245,
+              "max": 32.47309875488281,
+              "mean": 5.218329429626465,
+              "max_abs": 32.47309875488281
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.1016845703125,
+              "mean": 300.01141357421875,
+              "max_abs": 300.1016845703125
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 1.809931291063549e-06,
+              "mean": 3.966954125189659e-07,
+              "max_abs": 1.809931291063549e-06
+            }
+          }
+        }
+      ],
+      "state_changes": [
+        {
+          "from_step": 0,
+          "to_step": 2,
+          "max_abs_delta": {
+            "velocity": 0.009999898262321949,
+            "pressure": 8.32597827911377,
+            "temperature": 0.027130126953125,
+            "eddy_viscosity": 1.3405536947175278e-06
+          },
+          "overall_max_abs_delta": 8.32597827911377
+        },
+        {
+          "from_step": 2,
+          "to_step": 4,
+          "max_abs_delta": {
+            "velocity": 0.001975785009562969,
+            "pressure": 15.903430938720703,
+            "temperature": 0.02960205078125,
+            "eddy_viscosity": 3.4803156268026214e-07
+          },
+          "overall_max_abs_delta": 15.903430938720703
+        },
+        {
+          "from_step": 4,
+          "to_step": 6,
+          "max_abs_delta": {
+            "velocity": 0.001281985198147595,
+            "pressure": 7.807464599609375,
+            "temperature": 0.030120849609375,
+            "eddy_viscosity": 2.7215338604946737e-07
+          },
+          "overall_max_abs_delta": 7.807464599609375
+        },
+        {
+          "from_step": 6,
+          "to_step": 7,
+          "max_abs_delta": {
+            "velocity": 0.0008662812178954482,
+            "pressure": 3.0079784393310547,
+            "temperature": 0.015533447265625,
+            "eddy_viscosity": 1.7762818060873542e-07
+          },
+          "overall_max_abs_delta": 3.0079784393310547
+        }
+      ],
+      "final_field_exact_match": {
+        "velocity": true,
+        "pressure": true,
+        "temperature": true,
+        "eddy_viscosity": true
+      }
+    }
+  },
+  "cpu_reference": {
+    "result": {
+      "status": "completed",
+      "steps": 7,
+      "converged": false,
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "compute_backend": "reference",
+        "device": "cpu",
+        "device_actual": "cpu:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5001209288698851,
+        "tau_max": 0.5003374322390679,
+        "mach_max": 0.0034641016151377548,
+        "thermal_fourier_max": 0.00026337448559670784,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.0010349951417480214,
+        "temperature_residual": 5.1789022914935854e-05,
+        "eddy_viscosity_max_m2_s": 1.8099313175501882e-06,
+        "turbulent_conductivity_max_w_m_k": 8.393327227172108,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 120,
+        "solid_cells": 8,
+        "thermal_cells": 128,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "NumPy finite-volume on host",
+        "les_backend": "NumPy Smagorinsky host operator",
+        "property_backend": "NumPy material evaluator",
+        "full_field_transfers": null,
+        "snapshot_count": 5,
+        "snapshot_bytes": 23508,
+        "device_scalar_transfers": null,
+        "timings": {
+          "first_step_s": 0.0,
+          "warm_compute_s": 0.0,
+          "save_s": 0.0,
+          "snapshots_s": 0.07251667100354098
+        },
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+          "thermal advection/diffusion uses an explicit NumPy finite-volume update on the host"
+        ]
+      }
+    },
+    "progress": [
+      {
+        "step": 0,
+        "progress": 0.0,
+        "residual": 0.0,
+        "temperature_min": 300.0,
+        "temperature_max": 300.0
+      },
+      {
+        "step": 1,
+        "progress": 0.14285714285714285,
+        "residual": 0.9999990686834328,
+        "temperature_min": 300.0,
+        "temperature_max": 300.01040247434014
+      },
+      {
+        "step": 2,
+        "progress": 0.2857142857142857,
+        "residual": 0.500531383349804,
+        "temperature_min": 300.0,
+        "temperature_max": 300.02713698193
+      },
+      {
+        "step": 3,
+        "progress": 0.42857142857142855,
+        "residual": 0.17655162469091204,
+        "temperature_min": 300.0,
+        "temperature_max": 300.0416469530576
+      },
+      {
+        "step": 4,
+        "progress": 0.5714285714285714,
+        "residual": 0.10301132652682576,
+        "temperature_min": 300.0,
+        "temperature_max": 300.0567291811297
+      },
+      {
+        "step": 5,
+        "progress": 0.7142857142857143,
+        "residual": 0.108789373972795,
+        "temperature_min": 300.0,
+        "temperature_max": 300.07158334072
+      },
+      {
+        "step": 6,
+        "progress": 0.8571428571428571,
+        "residual": 0.07169292337315904,
+        "temperature_min": 300.0,
+        "temperature_max": 300.08643708760616
+      },
+      {
+        "step": 7,
+        "progress": 1.0,
+        "residual": 0.0872556984216825,
+        "temperature_min": 300.0,
+        "temperature_max": 300.1016928330777
+      }
+    ],
+    "verification": {
+      "directory": "/output/verified/cpu_reference_les_cht",
+      "frame_steps": [
+        0,
+        2,
+        4,
+        6,
+        7
+      ],
+      "frame_count": 5,
+      "frames": [
+        {
+          "step": 0,
+          "time": 0.0,
+          "file": "step_000000000.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -4.6566128730773926e-08,
+              "max": 9.313225746154785e-09,
+              "mean": -1.1641532182693481e-08,
+              "max_abs": 4.6566128730773926e-08
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.001487135887145996,
+              "max": 0.0,
+              "mean": -0.0013941898941993713,
+              "max_abs": 0.001487135887145996
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.0,
+              "mean": 300.0,
+              "max_abs": 300.0
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0,
+              "max_abs": 0.0
+            }
+          }
+        },
+        {
+          "step": 2,
+          "time": 0.002,
+          "file": "step_000000002.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.0008344115922227502,
+              "max": 0.009999898262321949,
+              "mean": 0.0005919136456213892,
+              "max_abs": 0.009999898262321949
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.008922815322875977,
+              "max": 8.32597827911377,
+              "mean": 0.8689831495285034,
+              "max_abs": 8.32597827911377
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.0271301269531,
+              "mean": 300.0030517578125,
+              "max_abs": 300.0271301269531
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 1.3405536947175278e-06,
+              "mean": 3.1735811489852495e-07,
+              "max_abs": 1.3405536947175278e-06
+            }
+          }
+        },
+        {
+          "step": 4,
+          "time": 0.004,
+          "file": "step_000000004.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.0015987309161573648,
+              "max": 0.009999959729611874,
+              "mean": 0.0006013005040585995,
+              "max_abs": 0.009999959729611874
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.010409951210021973,
+              "max": 22.839433670043945,
+              "mean": 3.196234703063965,
+              "max_abs": 22.839433670043945
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.0567321777344,
+              "mean": 300.00634765625,
+              "max_abs": 300.0567321777344
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 1.5034321450002608e-06,
+              "mean": 3.6134287029199186e-07,
+              "max_abs": 1.5034321450002608e-06
+            }
+          }
+        },
+        {
+          "step": 6,
+          "time": 0.006,
+          "file": "step_000000006.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.0015345902647823095,
+              "max": 0.009999959729611874,
+              "mean": 0.0006108122179284692,
+              "max_abs": 0.009999959729611874
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.8099933862686157,
+              "max": 29.467103958129883,
+              "mean": 4.646265506744385,
+              "max_abs": 29.467103958129883
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.08642578125,
+              "mean": 300.00970458984375,
+              "max_abs": 300.08642578125
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 1.718393036753696e-06,
+              "mean": 3.873478533478192e-07,
+              "max_abs": 1.718393036753696e-06
+            }
+          }
+        },
+        {
+          "step": 7,
+          "time": 0.007,
+          "file": "step_000000007.npz",
+          "finite": true,
+          "stats": {
+            "velocity": {
+              "shape": [
+                3,
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.0011374664027243853,
+              "max": 0.009999959729611874,
+              "mean": 0.0005733905709348619,
+              "max_abs": 0.009999959729611874
+            },
+            "pressure": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": -0.5095919370651245,
+              "max": 32.47309875488281,
+              "mean": 5.218329429626465,
+              "max_abs": 32.47309875488281
+            },
+            "temperature": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 300.0,
+              "max": 300.1016845703125,
+              "mean": 300.01141357421875,
+              "max_abs": 300.1016845703125
+            },
+            "eddy_viscosity": {
+              "shape": [
+                8,
+                4,
+                4
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "min": 0.0,
+              "max": 1.809931291063549e-06,
+              "mean": 3.966954409406753e-07,
+              "max_abs": 1.809931291063549e-06
+            }
+          }
+        }
+      ],
+      "state_changes": [
+        {
+          "from_step": 0,
+          "to_step": 2,
+          "max_abs_delta": {
+            "velocity": 0.009999888949096203,
+            "pressure": 8.327465057373047,
+            "temperature": 0.027130126953125,
+            "eddy_viscosity": 1.3405536947175278e-06
+          },
+          "overall_max_abs_delta": 8.327465057373047
+        },
+        {
+          "from_step": 2,
+          "to_step": 4,
+          "max_abs_delta": {
+            "velocity": 0.001975785009562969,
+            "pressure": 15.903430938720703,
+            "temperature": 0.02960205078125,
+            "eddy_viscosity": 3.4803156268026214e-07
+          },
+          "overall_max_abs_delta": 15.903430938720703
+        },
+        {
+          "from_step": 4,
+          "to_step": 6,
+          "max_abs_delta": {
+            "velocity": 0.001281985198147595,
+            "pressure": 7.807464599609375,
+            "temperature": 0.030120849609375,
+            "eddy_viscosity": 2.7215338604946737e-07
+          },
+          "overall_max_abs_delta": 7.807464599609375
+        },
+        {
+          "from_step": 6,
+          "to_step": 7,
+          "max_abs_delta": {
+            "velocity": 0.0008662812178954482,
+            "pressure": 3.0079784393310547,
+            "temperature": 0.015533447265625,
+            "eddy_viscosity": 1.7762818060873542e-07
+          },
+          "overall_max_abs_delta": 3.0079784393310547
+        }
+      ],
+      "final_field_exact_match": {
+        "velocity": true,
+        "pressure": true,
+        "temperature": true,
+        "eddy_viscosity": true
+      }
+    }
+  },
+  "cpu_cuda_frame_comparison": {
+    "velocity": {
+      "max_absolute_difference": 7.90605554357171e-08,
+      "max_relative_difference_using_atol_floor": 0.0023283064365386963,
+      "rtol": 0.003,
+      "atol": 2e-05
+    },
+    "pressure": {
+      "max_absolute_difference": 0.001487135887145996,
+      "max_relative_difference_using_atol_floor": 0.029742717742919922,
+      "rtol": 0.003,
+      "atol": 0.05
+    },
+    "temperature": {
+      "max_absolute_difference": 0.0,
+      "max_relative_difference_using_atol_floor": 0.0,
+      "rtol": 0.0,
+      "atol": 0.001
+    },
+    "eddy_viscosity": {
+      "max_absolute_difference": 7.133849067031406e-12,
+      "max_relative_difference_using_atol_floor": 6.220005889190361e-05,
+      "rtol": 0.003,
+      "atol": 1e-07
+    }
+  },
+  "optional_checks": {
+    "stop_before_first_step": {
+      "result": {
+        "status": "stopped",
+        "steps": 0,
+        "converged": false,
+        "diagnostics": {
+          "backend": "XLB D3Q27 BGK via JAX",
+          "compute_backend": "device",
+          "device": "cuda:0",
+          "device_actual": "cuda:0",
+          "jax_matmul_precision": "highest",
+          "velocity_set": "D3Q27",
+          "collision": "BGK",
+          "tau_min": 0.5001202404809619,
+          "tau_max": 0.5001202404809619,
+          "mach_max": 0.0034641016151377548,
+          "thermal_fourier_max": 0.00026337448559670784,
+          "thermal_robin_loss_max": 0.0,
+          "thermal_loss_coefficient_max": 0.0008472408151123011,
+          "temperature_residual": 0.0,
+          "eddy_viscosity_max_m2_s": 0.0,
+          "turbulent_conductivity_max_w_m_k": 0.0,
+          "turbulence_model": "smagorinsky",
+          "smagorinsky_constant": 0.17,
+          "turbulent_prandtl": 0.9,
+          "flow_cells": 120,
+          "solid_cells": 8,
+          "thermal_cells": 128,
+          "rho_reference_kg_m3": 998.0,
+          "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+          "thermal_backend": "JAX finite-volume on device",
+          "les_backend": "JAX Smagorinsky device operator",
+          "property_backend": "JAX material evaluator on device",
+          "full_field_transfers": 1,
+          "snapshot_count": 1,
+          "snapshot_bytes": 7092,
+          "device_scalar_transfers": 28,
+          "timings": {
+            "first_step_s": 0.0,
+            "warm_compute_s": 0.0,
+            "save_s": 0.4041795669909334,
+            "snapshots_s": 0.0
+          },
+          "warnings": [
+            "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+            "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+          ]
+        }
+      },
+      "progress": [
+        {
+          "step": 0,
+          "progress": 0.0,
+          "residual": 0.0,
+          "temperature_min": 300.0,
+          "temperature_max": 300.0
+        }
+      ],
+      "verification": {
+        "directory": "/output/verified/cuda_stop_before_first_step",
+        "frame_steps": [
+          0
+        ],
+        "frame_count": 1,
+        "frames": [
+          {
+            "step": 0,
+            "time": 0.0,
+            "file": "step_000000000.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": -4.6566128730773926e-08,
+                "max": 9.313225746154785e-09,
+                "mean": -1.1641532182693481e-08,
+                "max_abs": 4.6566128730773926e-08
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": -0.001487135887145996,
+                "max": 0.0,
+                "mean": -0.0013941898941993713,
+                "max_abs": 0.001487135887145996
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 300.0,
+                "max": 300.0,
+                "mean": 300.0,
+                "max_abs": 300.0
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              }
+            }
+          }
+        ],
+        "state_changes": [],
+        "final_field_exact_match": {
+          "velocity": true,
+          "pressure": true,
+          "temperature": true,
+          "eddy_viscosity": true
+        }
+      }
+    },
+    "stop_at_step_3": {
+      "result": {
+        "status": "stopped",
+        "steps": 3,
+        "converged": false,
+        "diagnostics": {
+          "backend": "XLB D3Q27 BGK via JAX",
+          "compute_backend": "device",
+          "device": "cuda:0",
+          "device_actual": "cuda:0",
+          "jax_matmul_precision": "highest",
+          "velocity_set": "D3Q27",
+          "collision": "BGK",
+          "tau_min": 0.5001202437077611,
+          "tau_max": 0.5003045456753775,
+          "mach_max": 0.0034641016151377548,
+          "thermal_fourier_max": 0.00026337448559670784,
+          "thermal_robin_loss_max": 0.0,
+          "thermal_loss_coefficient_max": 0.001069808120844645,
+          "temperature_residual": 4.8359859836438204e-05,
+          "eddy_viscosity_max_m2_s": 1.535876620129877e-06,
+          "turbulent_conductivity_max_w_m_k": 7.122433281480421,
+          "turbulence_model": "smagorinsky",
+          "smagorinsky_constant": 0.17,
+          "turbulent_prandtl": 0.9,
+          "flow_cells": 120,
+          "solid_cells": 8,
+          "thermal_cells": 128,
+          "rho_reference_kg_m3": 998.0,
+          "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+          "thermal_backend": "JAX finite-volume on device",
+          "les_backend": "JAX Smagorinsky device operator",
+          "property_backend": "JAX material evaluator on device",
+          "full_field_transfers": 3,
+          "snapshot_count": 3,
+          "snapshot_bytes": 15300,
+          "device_scalar_transfers": 103,
+          "timings": {
+            "first_step_s": 1.9444433269964065,
+            "warm_compute_s": 0.09200791000330355,
+            "save_s": 0.17098946799524128,
+            "snapshots_s": 0.2903581670107087
+          },
+          "warnings": [
+            "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+            "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+          ]
+        }
+      },
+      "progress": [
+        {
+          "step": 0,
+          "progress": 0.0,
+          "residual": 0.0,
+          "temperature_min": 300.0,
+          "temperature_max": 300.0
+        },
+        {
+          "step": 1,
+          "progress": 0.14285714285714285,
+          "residual": 1.0,
+          "temperature_min": 300.0,
+          "temperature_max": 300.0104024748058
+        },
+        {
+          "step": 2,
+          "progress": 0.2857142857142857,
+          "residual": 0.5005313754081726,
+          "temperature_min": 300.0,
+          "temperature_max": 300.02713698338744
+        },
+        {
+          "step": 3,
+          "progress": 0.42857142857142855,
+          "residual": 0.17655162513256073,
+          "temperature_min": 300.0,
+          "temperature_max": 300.0416469553793
+        }
+      ],
+      "verification": {
+        "directory": "/output/verified/cuda_stop_at_step_3",
+        "frame_steps": [
+          0,
+          2,
+          3
+        ],
+        "frame_count": 3,
+        "frames": [
+          {
+            "step": 0,
+            "time": 0.0,
+            "file": "step_000000000.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 300.0,
+                "max": 300.0,
+                "mean": 300.0,
+                "max_abs": 300.0
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              }
+            }
+          },
+          {
+            "step": 2,
+            "time": 0.002,
+            "file": "step_000000002.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": -0.0008344115922227502,
+                "max": 0.009999898262321949,
+                "mean": 0.0005919136456213892,
+                "max_abs": 0.009999898262321949
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": -0.008922815322875977,
+                "max": 8.32597827911377,
+                "mean": 0.8689831495285034,
+                "max_abs": 8.32597827911377
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 300.0,
+                "max": 300.0271301269531,
+                "mean": 300.0030517578125,
+                "max_abs": 300.0271301269531
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 1.3405536947175278e-06,
+                "mean": 3.1735811489852495e-07,
+                "max_abs": 1.3405536947175278e-06
+              }
+            }
+          },
+          {
+            "step": 3,
+            "time": 0.003,
+            "file": "step_000000003.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": -0.0010859515750780702,
+                "max": 0.009999959729611874,
+                "mean": 0.0005675898864865303,
+                "max_abs": 0.009999959729611874
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": -0.010409951210021973,
+                "max": 18.945119857788086,
+                "mean": 2.266310214996338,
+                "max_abs": 18.945119857788086
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 300.0,
+                "max": 300.0416564941406,
+                "mean": 300.00469970703125,
+                "max_abs": 300.0416564941406
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 1.5358766631834442e-06,
+                "mean": 3.519089659675956e-07,
+                "max_abs": 1.5358766631834442e-06
+              }
+            }
+          }
+        ],
+        "state_changes": [
+          {
+            "from_step": 0,
+            "to_step": 2,
+            "max_abs_delta": {
+              "velocity": 0.009999898262321949,
+              "pressure": 8.32597827911377,
+              "temperature": 0.027130126953125,
+              "eddy_viscosity": 1.3405536947175278e-06
+            },
+            "overall_max_abs_delta": 8.32597827911377
+          },
+          {
+            "from_step": 2,
+            "to_step": 3,
+            "max_abs_delta": {
+              "velocity": 0.0012178244069218636,
+              "pressure": 10.619141578674316,
+              "temperature": 0.0145263671875,
+              "eddy_viscosity": 2.6609268388710916e-07
+            },
+            "overall_max_abs_delta": 10.619141578674316
+          }
+        ],
+        "final_field_exact_match": {
+          "velocity": true,
+          "pressure": true,
+          "temperature": true,
+          "eddy_viscosity": true
+        }
+      }
+    },
+    "thermal_only_zero_velocity": {
+      "result": {
+        "status": "completed",
+        "steps": 7,
+        "converged": false,
+        "diagnostics": {
+          "backend": "XLB D3Q27 BGK via JAX",
+          "compute_backend": "device",
+          "device": "cuda:0",
+          "device_actual": "cuda:0",
+          "jax_matmul_precision": "highest",
+          "velocity_set": "D3Q27",
+          "collision": "BGK",
+          "tau_min": 0.5001202404809619,
+          "tau_max": 0.5001202404809619,
+          "mach_max": 0.0,
+          "thermal_fourier_max": 0.00026337448559670784,
+          "thermal_robin_loss_max": 0.0,
+          "thermal_loss_coefficient_max": 0.0008472408151123011,
+          "temperature_residual": 3.833180718935278e-07,
+          "eddy_viscosity_max_m2_s": 0.0,
+          "turbulent_conductivity_max_w_m_k": 0.0,
+          "turbulence_model": "smagorinsky",
+          "smagorinsky_constant": 0.17,
+          "turbulent_prandtl": 0.9,
+          "flow_cells": 120,
+          "solid_cells": 8,
+          "thermal_cells": 128,
+          "rho_reference_kg_m3": 998.0,
+          "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+          "thermal_backend": "JAX finite-volume on device",
+          "les_backend": "disabled (flow disabled)",
+          "property_backend": "JAX material evaluator on device",
+          "full_field_transfers": 5,
+          "snapshot_count": 5,
+          "snapshot_bytes": 23508,
+          "device_scalar_transfers": 146,
+          "timings": {
+            "first_step_s": 0.3199150699947495,
+            "warm_compute_s": 0.1504804750002222,
+            "save_s": 0.15012818800460082,
+            "snapshots_s": 0.1254118820070289
+          },
+          "warnings": [
+            "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+            "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+          ]
+        }
+      },
+      "progress": [
+        {
+          "step": 0,
+          "progress": 0.0,
+          "residual": 0.0,
+          "temperature_min": 300.0,
+          "temperature_max": 300.0
+        },
+        {
+          "step": 1,
+          "progress": 0.14285714285714285,
+          "residual": 3.83358631737022e-07,
+          "temperature_min": 299.9998849923664,
+          "temperature_max": 300.0001150076336
+        },
+        {
+          "step": 2,
+          "progress": 0.2857142857142857,
+          "residual": 3.833518716174931e-07,
+          "temperature_min": 299.99976998671673,
+          "temperature_max": 300.00023001328327
+        },
+        {
+          "step": 3,
+          "progress": 0.42857142857142855,
+          "residual": 3.8334511131620465e-07,
+          "temperature_min": 299.9996549830511,
+          "temperature_max": 300.0003450169489
+        },
+        {
+          "step": 4,
+          "progress": 0.5714285714285714,
+          "residual": 3.83338351212112e-07,
+          "temperature_min": 299.99953998136937,
+          "temperature_max": 300.00046001863063
+        },
+        {
+          "step": 5,
+          "progress": 0.7142857142857143,
+          "residual": 3.833315913052149e-07,
+          "temperature_min": 299.99942498167155,
+          "temperature_max": 300.00057501832845
+        },
+        {
+          "step": 6,
+          "progress": 0.8571428571428571,
+          "residual": 3.833248315955128e-07,
+          "temperature_min": 299.9993099839576,
+          "temperature_max": 300.0006900160424
+        },
+        {
+          "step": 7,
+          "progress": 1.0,
+          "residual": 3.833180718935278e-07,
+          "temperature_min": 299.99919498822743,
+          "temperature_max": 300.00080501177257
+        }
+      ],
+      "verification": {
+        "directory": "/output/verified/cuda_thermal_only",
+        "frame_steps": [
+          0,
+          2,
+          4,
+          6,
+          7
+        ],
+        "frame_count": 5,
+        "frames": [
+          {
+            "step": 0,
+            "time": 0.0,
+            "file": "step_000000000.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 300.0,
+                "max": 300.0,
+                "mean": 300.0,
+                "max_abs": 300.0
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              }
+            }
+          },
+          {
+            "step": 2,
+            "time": 0.002,
+            "file": "step_000000002.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 299.999755859375,
+                "max": 300.000244140625,
+                "mean": 300.0,
+                "max_abs": 300.000244140625
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              }
+            }
+          },
+          {
+            "step": 4,
+            "time": 0.004,
+            "file": "step_000000004.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 299.9995422363281,
+                "max": 300.0004577636719,
+                "mean": 300.0,
+                "max_abs": 300.0004577636719
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              }
+            }
+          },
+          {
+            "step": 6,
+            "time": 0.006,
+            "file": "step_000000006.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 299.9992980957031,
+                "max": 300.0007019042969,
+                "mean": 300.0000305175781,
+                "max_abs": 300.0007019042969
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              }
+            }
+          },
+          {
+            "step": 7,
+            "time": 0.007,
+            "file": "step_000000007.npz",
+            "finite": true,
+            "stats": {
+              "velocity": {
+                "shape": [
+                  3,
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              },
+              "pressure": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": -0.001487135887145996,
+                "max": 0.0,
+                "mean": -0.0013941898941993713,
+                "max_abs": 0.001487135887145996
+              },
+              "temperature": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 299.99920654296875,
+                "max": 300.00079345703125,
+                "mean": 299.9999694824219,
+                "max_abs": 300.00079345703125
+              },
+              "eddy_viscosity": {
+                "shape": [
+                  8,
+                  4,
+                  4
+                ],
+                "dtype": "float32",
+                "finite": true,
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "max_abs": 0.0
+              }
+            }
+          }
+        ],
+        "state_changes": [
+          {
+            "from_step": 0,
+            "to_step": 2,
+            "max_abs_delta": {
+              "velocity": 0.0,
+              "pressure": 0.0,
+              "temperature": 0.000244140625,
+              "eddy_viscosity": 0.0
+            },
+            "overall_max_abs_delta": 0.000244140625
+          },
+          {
+            "from_step": 2,
+            "to_step": 4,
+            "max_abs_delta": {
+              "velocity": 0.0,
+              "pressure": 0.0,
+              "temperature": 0.000213623046875,
+              "eddy_viscosity": 0.0
+            },
+            "overall_max_abs_delta": 0.000213623046875
+          },
+          {
+            "from_step": 4,
+            "to_step": 6,
+            "max_abs_delta": {
+              "velocity": 0.0,
+              "pressure": 0.0,
+              "temperature": 0.000244140625,
+              "eddy_viscosity": 0.0
+            },
+            "overall_max_abs_delta": 0.000244140625
+          },
+          {
+            "from_step": 6,
+            "to_step": 7,
+            "max_abs_delta": {
+              "velocity": 0.0,
+              "pressure": 0.001487135887145996,
+              "temperature": 9.1552734375e-05,
+              "eddy_viscosity": 0.0
+            },
+            "overall_max_abs_delta": 0.001487135887145996
+          }
+        ],
+        "final_field_exact_match": {
+          "velocity": true,
+          "pressure": true,
+          "temperature": true,
+          "eddy_viscosity": true
+        }
+      },
+      "zero_velocity": {
+        "0": true,
+        "2": true,
+        "4": true,
+        "6": true,
+        "7": true,
+        "final_fields": true
+      }
+    }
+  },
+  "reproduction": {
+    "command_shape": "wsl.exe -d Ubuntu-24.04 -u root --cd /mnt/h/20260902_XLB/xlb_workbench -- docker run --rm --gpus all ...",
+    "mounts": [
+      "workbench:/app/workbench:ro",
+      "development_archive/transient-gpu:/output",
+      "docs:/evidence"
+    ],
+    "script": "scripts/verify_transient_solver.py"
+  }
+}

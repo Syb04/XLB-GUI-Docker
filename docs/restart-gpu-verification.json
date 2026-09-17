@@ -1,0 +1,187 @@
+{
+  "hardware": "cuda:0",
+  "cases": [
+    {
+      "mode": "les_cht",
+      "continuous_steps": 7,
+      "split_steps": [
+        3,
+        4
+      ],
+      "checkpoint_step": 7,
+      "end_time_s": 0.007,
+      "max_absolute_errors": {
+        "restart.npz:f": 0.0,
+        "restart.npz:temperature": 0.0,
+        "fields.npz:velocity": 0.0,
+        "fields.npz:pressure": 0.0,
+        "fields.npz:temperature": 0.0,
+        "fields.npz:eddy_viscosity": 0.0
+      },
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "compute_backend": "device",
+        "device": "cuda:0",
+        "device_actual": "cuda:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5001209288698851,
+        "tau_max": 0.5003374322390679,
+        "mach_max": 0.0034641016151377548,
+        "thermal_fourier_max": 0.00026337448559670784,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.0010349951458565963,
+        "temperature_residual": 5.1789027453510095e-05,
+        "eddy_viscosity_max_m2_s": 1.809931317550188e-06,
+        "turbulent_conductivity_max_w_m_k": 8.393327227172106,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 120,
+        "solid_cells": 8,
+        "thermal_cells": 128,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "JAX finite-volume on device",
+        "les_backend": "JAX Smagorinsky device operator",
+        "property_backend": "JAX material evaluator on device",
+        "full_field_transfers": 4,
+        "snapshot_count": 4,
+        "snapshot_bytes": 19404,
+        "device_scalar_transfers": 128,
+        "timings": {
+          "first_step_s": 2.0003160210035276,
+          "warm_compute_s": 0.1433281830395572,
+          "save_s": 0.03923769999528304,
+          "snapshots_s": 0.2801009789982345
+        },
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+          "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+        ]
+      }
+    },
+    {
+      "mode": "thermal_only",
+      "continuous_steps": 7,
+      "split_steps": [
+        3,
+        4
+      ],
+      "checkpoint_step": 7,
+      "end_time_s": 0.007,
+      "max_absolute_errors": {
+        "restart.npz:f": 0.0,
+        "restart.npz:temperature": 0.0,
+        "fields.npz:velocity": 0.0,
+        "fields.npz:pressure": 0.0,
+        "fields.npz:temperature": 0.0,
+        "fields.npz:eddy_viscosity": 0.0
+      },
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "compute_backend": "device",
+        "device": "cuda:0",
+        "device_actual": "cuda:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5001202404809619,
+        "tau_max": 0.5001202404809619,
+        "mach_max": 0.0,
+        "thermal_fourier_max": 0.00026337448559670784,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.0008472408151123011,
+        "temperature_residual": 3.833180718935278e-07,
+        "eddy_viscosity_max_m2_s": 0.0,
+        "turbulent_conductivity_max_w_m_k": 0.0,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 120,
+        "solid_cells": 8,
+        "thermal_cells": 128,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "JAX finite-volume on device",
+        "les_backend": "disabled (flow disabled)",
+        "property_backend": "JAX material evaluator on device",
+        "full_field_transfers": 4,
+        "snapshot_count": 4,
+        "snapshot_bytes": 19404,
+        "device_scalar_transfers": 92,
+        "timings": {
+          "first_step_s": 0.288289181975415,
+          "warm_compute_s": 0.05608326199580915,
+          "save_s": 0.18039771899930201,
+          "snapshots_s": 0.017852632008725777
+        },
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+          "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+        ]
+      }
+    },
+    {
+      "mode": "flow_only",
+      "continuous_steps": 7,
+      "split_steps": [
+        3,
+        4
+      ],
+      "checkpoint_step": 7,
+      "end_time_s": 0.007,
+      "max_absolute_errors": {
+        "restart.npz:f": 0.0,
+        "restart.npz:temperature": 0.0,
+        "fields.npz:velocity": 0.0,
+        "fields.npz:pressure": 0.0,
+        "fields.npz:temperature": 0.0,
+        "fields.npz:eddy_viscosity": 0.0
+      },
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "compute_backend": "device",
+        "device": "cuda:0",
+        "device_actual": "cuda:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5001209288698851,
+        "tau_max": 0.5003374322390679,
+        "mach_max": 0.0034641016151377548,
+        "thermal_fourier_max": 0.0,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.0,
+        "temperature_residual": 0.0,
+        "eddy_viscosity_max_m2_s": 1.809931317550188e-06,
+        "turbulent_conductivity_max_w_m_k": 0.0,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 120,
+        "solid_cells": 8,
+        "thermal_cells": 128,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "disabled",
+        "les_backend": "JAX Smagorinsky device operator",
+        "property_backend": "JAX material evaluator on device",
+        "full_field_transfers": 4,
+        "snapshot_count": 4,
+        "snapshot_bytes": 19404,
+        "device_scalar_transfers": 108,
+        "timings": {
+          "first_step_s": 2.3653521650121547,
+          "warm_compute_s": 0.0936708849912975,
+          "save_s": 0.04382467400864698,
+          "snapshots_s": 0.2900020230154041
+        },
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark"
+        ]
+      }
+    }
+  ]
+}

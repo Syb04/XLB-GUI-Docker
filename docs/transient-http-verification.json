@@ -1,0 +1,349 @@
+{
+  "url": "http://127.0.0.1:8766",
+  "run_id": "3f78313c0c6d4250ad08b7a9443d4a4c",
+  "restored_run_id": "130f34aff7544d26bad0863855f12c39",
+  "live_frame": {
+    "step": 2,
+    "status": "running",
+    "time": 0.01
+  },
+  "frames": [
+    {
+      "step": 0,
+      "time": 0.0
+    },
+    {
+      "step": 2,
+      "time": 0.01
+    },
+    {
+      "step": 4,
+      "time": 0.02
+    },
+    {
+      "step": 6,
+      "time": 0.03
+    },
+    {
+      "step": 8,
+      "time": 0.04
+    },
+    {
+      "step": 10,
+      "time": 0.05
+    },
+    {
+      "step": 12,
+      "time": 0.06
+    },
+    {
+      "step": 14,
+      "time": 0.07
+    },
+    {
+      "step": 16,
+      "time": 0.08
+    },
+    {
+      "step": 18,
+      "time": 0.09
+    },
+    {
+      "step": 20,
+      "time": 0.1
+    },
+    {
+      "step": 22,
+      "time": 0.11
+    },
+    {
+      "step": 24,
+      "time": 0.12
+    },
+    {
+      "step": 26,
+      "time": 0.13
+    },
+    {
+      "step": 28,
+      "time": 0.14
+    },
+    {
+      "step": 30,
+      "time": 0.15
+    },
+    {
+      "step": 32,
+      "time": 0.16
+    },
+    {
+      "step": 34,
+      "time": 0.17
+    },
+    {
+      "step": 36,
+      "time": 0.18
+    },
+    {
+      "step": 38,
+      "time": 0.19
+    },
+    {
+      "step": 40,
+      "time": 0.2
+    },
+    {
+      "step": 42,
+      "time": 0.21
+    },
+    {
+      "step": 44,
+      "time": 0.22
+    },
+    {
+      "step": 46,
+      "time": 0.23
+    },
+    {
+      "step": 48,
+      "time": 0.24
+    },
+    {
+      "step": 50,
+      "time": 0.25
+    },
+    {
+      "step": 52,
+      "time": 0.26
+    },
+    {
+      "step": 54,
+      "time": 0.27
+    },
+    {
+      "step": 56,
+      "time": 0.28
+    },
+    {
+      "step": 58,
+      "time": 0.29
+    },
+    {
+      "step": 60,
+      "time": 0.3
+    },
+    {
+      "step": 62,
+      "time": 0.31
+    },
+    {
+      "step": 64,
+      "time": 0.32
+    },
+    {
+      "step": 66,
+      "time": 0.33
+    },
+    {
+      "step": 68,
+      "time": 0.34
+    },
+    {
+      "step": 70,
+      "time": 0.35000000000000003
+    },
+    {
+      "step": 72,
+      "time": 0.36
+    },
+    {
+      "step": 74,
+      "time": 0.37
+    },
+    {
+      "step": 76,
+      "time": 0.38
+    },
+    {
+      "step": 78,
+      "time": 0.39
+    },
+    {
+      "step": 80,
+      "time": 0.4
+    }
+  ],
+  "fields": {
+    "temperature": {
+      "unit": "K",
+      "min": 293.1499938964844,
+      "max": 293.1619567871094
+    },
+    "speed": {
+      "unit": "m/s",
+      "min": 1.1057288199865001e-08,
+      "max": 0.010000007227063241
+    },
+    "velocity_x": {
+      "unit": "m/s",
+      "min": -5.832251190440729e-05,
+      "max": 0.010000007227063179
+    },
+    "velocity_y": {
+      "unit": "m/s",
+      "min": -0.00043485284550115466,
+      "max": 0.0006441264413297176
+    },
+    "velocity_z": {
+      "unit": "m/s",
+      "min": -0.0011512201745063066,
+      "max": 0.00115120317786932
+    },
+    "pressure": {
+      "unit": "Pa",
+      "min": -0.02486332505941391,
+      "max": 1.7063214778900146
+    },
+    "density": {
+      "unit": "kg/m³",
+      "min": 998.0,
+      "max": 998.0
+    },
+    "eddy_viscosity": {
+      "unit": "m²/s",
+      "min": 1.0720386167326068e-12,
+      "max": 4.5489215949601203e-07
+    },
+    "vorticity": {
+      "unit": "s⁻¹",
+      "min": 1.6995075375709268e-06,
+      "max": 3.025698644451021
+    },
+    "vorticity_x": {
+      "unit": "s⁻¹",
+      "min": -0.24427932567050448,
+      "max": 0.24428714368696092
+    },
+    "vorticity_y": {
+      "unit": "s⁻¹",
+      "min": -3.0252172000473365,
+      "max": 3.0252367723733187
+    },
+    "vorticity_z": {
+      "unit": "s⁻¹",
+      "min": -0.5145283867022954,
+      "max": 0.5753166260547005
+    },
+    "heat_flux": {
+      "unit": "W/m²",
+      "min": 0.0,
+      "max": 3.5797119140625
+    },
+    "heat_flux_x": {
+      "unit": "W/m²",
+      "min": -0.7232666015625,
+      "max": 0.02288818359375
+    },
+    "heat_flux_y": {
+      "unit": "W/m²",
+      "min": -0.00457763671875,
+      "max": 0.0091552734375
+    },
+    "heat_flux_z": {
+      "unit": "W/m²",
+      "min": -3.5797119140625,
+      "max": -0.0
+    },
+    "conductivity": {
+      "unit": "W/(m·K)",
+      "min": 0.6,
+      "max": 0.6
+    },
+    "dynamic_viscosity": {
+      "unit": "Pa·s",
+      "min": 0.001,
+      "max": 0.001
+    },
+    "heat_capacity": {
+      "unit": "J/(kg·K)",
+      "min": 4182.0,
+      "max": 4182.0
+    }
+  },
+  "diagnostics": {
+    "backend": "XLB D3Q27 BGK via JAX",
+    "compute_backend": "device",
+    "device": "cuda:0",
+    "device_actual": "cuda:0",
+    "jax_matmul_precision": "highest",
+    "velocity_set": "D3Q27",
+    "collision": "BGK",
+    "tau_min": 0.5038239249645018,
+    "tau_max": 0.5066488835936711,
+    "mach_max": 0.043301306664943695,
+    "thermal_fourier_max": 0.001256411078783105,
+    "thermal_robin_loss_max": 0.0,
+    "thermal_loss_coefficient_max": 0.00564361059746719,
+    "temperature_residual": 9.955526071293934e-06,
+    "eddy_viscosity_max_m2_s": 7.710316169629242e-07,
+    "turbulent_conductivity_max_w_m_k": 3.575561459660746,
+    "turbulence_model": "smagorinsky",
+    "smagorinsky_constant": 0.17,
+    "turbulent_prandtl": 0.9,
+    "flow_cells": 3000,
+    "solid_cells": 0,
+    "thermal_cells": 3000,
+    "rho_reference_kg_m3": 998.0,
+    "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+    "thermal_backend": "JAX finite-volume on device",
+    "les_backend": "JAX Smagorinsky device operator",
+    "property_backend": "JAX material evaluator on device",
+    "full_field_transfers": 41,
+    "snapshot_count": 41,
+    "snapshot_bytes": 3028892,
+    "device_scalar_transfers": 1324,
+    "timings": {
+      "first_step_s": 2.8489185369980987,
+      "warm_compute_s": 2.305978451986448,
+      "save_s": 0.2583263579872437,
+      "snapshots_s": 1.2932643830426969
+    },
+    "warnings": [
+      "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+      "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+    ]
+  },
+  "archive_bytes": 1888310,
+  "archive_restore": "passed",
+  "provenance": {
+    "created_at": "2026-09-16T23:14:59.950845+00:00",
+    "source_sha256": {
+      "__init__.py": "c820b473aa0370059c6a6a2cd1ef4ccc9426e0560263cd588a408166d38f5e51",
+      "fields_jax.py": "45ca5c123e61ec2a61ee8e75845b73ad8fb57604ed64a261f6e64d6f4d8c0be9",
+      "geometry.py": "8877e253a05407facec3b70cb2d9772c356355082d1384014eb0f85b28da1b02",
+      "limits.py": "28db1f1ea581443b53bd2bde520ecae1e81a991e4ae810e468ea0a89ad5cd13e",
+      "results.py": "731a9fb040a595a0e9218d83f40e080daa2fec35034f40ca9ebf241834c9d8a4",
+      "schema.py": "61b4851c75f61e7333a259c805bb40da252d88e770c931f9848b7f0c3a8c3825",
+      "server.py": "6b2de5e0d44c06dc668fb303f7f38eda0fb510309c0fac138192c06fbd2224c0",
+      "snapshots.py": "5dea81b30ca864bd27e6bd7730c7365b891ed2897f64c08bc1540dfa85b09392",
+      "solver.py": "a04810baf144033898bdb00ccded54bbb526cd2a3aa3fbc576d7d6d703ef3b6f",
+      "thermal_jax.py": "eab09e7213b2bf49136f851025ed99595b143dd951866b862727ce7bbff165af"
+    },
+    "packages": {
+      "xlb": "0.3.2",
+      "jax": "0.11.1",
+      "jaxlib": "0.11.1",
+      "numpy": "2.5.2",
+      "scipy": "1.18.1",
+      "trimesh": "5.1.0",
+      "gmsh": "4.15.2",
+      "warp-lang": "1.10.0"
+    },
+    "limits": {
+      "max_total_cells": 10000000,
+      "max_axis_cells": 1024,
+      "max_boundary_link_mib": 512
+    },
+    "compute_backend": "auto"
+  }
+}

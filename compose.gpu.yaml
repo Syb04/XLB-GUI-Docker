@@ -1,0 +1,16 @@
+# docker compose -f compose.yaml -f compose.gpu.yaml up --build -d
+# Requires an NVIDIA driver and NVIDIA Container Toolkit on the Docker host.
+services:
+  workbench:
+    build:
+      context: .
+      args:
+        JAX_CUDA: "1"
+    image: xlb-workbench:0.1.0-cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

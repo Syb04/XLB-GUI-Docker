@@ -1,0 +1,17 @@
+{
+  "status": "completed",
+  "cause": "boundary Mach number exceeded 0.30",
+  "tests_passed": 85,
+  "corrected_project": "fde26b202dcb43ee89dcc491b7fa7fc4",
+  "corrected_run": "bcb27b82572442b79ee1d1ef397fc931",
+  "corrected_dt": 0.0001,
+  "failed_run": "43df021f7e10459ab9eb1bd6cead4372",
+  "flow_stability": {
+    "boundary_speed": 1.0,
+    "boundary_mach": 6.06217782649107,
+    "mach_limit": 0.3,
+    "dt_max_exclusive": 0.0004948716593053935
+  },
+  "steps": 2000,
+  "physical_time_s": 0.2
+}

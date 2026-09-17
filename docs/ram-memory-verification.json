@@ -1,0 +1,355 @@
+{
+  "date": "2026-09-17",
+  "gpu": "NVIDIA GeForce RTX 3060 12 GiB",
+  "wsl_memory_mib": 15950,
+  "purpose": "RAM capacity and bounded CUDA allocator checks; 3 steps of flow/heat/LES with no transient snapshots. Not a convergence or turbulence validation. CUDA allocator counters exclude driver/context and other processes.",
+  "batch_cells": 65536,
+  "runs": [
+    {
+      "total_cells": 375000,
+      "elapsed_seconds": 17.420430049998686,
+      "peak_host_rss_mib": 1495.73828125,
+      "samples": [
+        {
+          "step": 0,
+          "progress": 0.0,
+          "residual": 0.0,
+          "temperature_min": 293.15,
+          "temperature_max": 293.15,
+          "elapsed_seconds": 2.699820625974098
+        },
+        {
+          "step": 1,
+          "progress": 0.3333333333333333,
+          "residual": 1.0000004470348385,
+          "temperature_min": 293.15,
+          "temperature_max": 293.1505989980918,
+          "elapsed_seconds": 12.480839045980247
+        },
+        {
+          "step": 2,
+          "progress": 0.6666666666666666,
+          "residual": 0.5060192853767761,
+          "temperature_min": 293.15,
+          "temperature_max": 293.1511974579856,
+          "elapsed_seconds": 13.038255152001511
+        },
+        {
+          "step": 3,
+          "progress": 1.0,
+          "residual": 0.2732834396781952,
+          "temperature_min": 293.15,
+          "temperature_max": 293.15179538064797,
+          "elapsed_seconds": 13.521684073988581
+        }
+      ],
+      "result": {
+        "status": "completed",
+        "steps": 3,
+        "converged": false,
+        "diagnostics": {
+          "backend": "XLB D3Q27 BGK via JAX",
+          "compute_backend": "ram",
+          "device": "cuda:0-ram",
+          "device_actual": "cpu:0",
+          "state_device": "cpu:0",
+          "collision_device": "cuda:0",
+          "ram_offload": {
+            "batch_cells": 65536,
+            "batches": 6,
+            "cells": 375000,
+            "valid_cells": 375000,
+            "padded_cells": 393216,
+            "padding_cells": 18216,
+            "upload_bytes": 50331648,
+            "download_bytes": 42467328,
+            "output_bytes": 40500000,
+            "jit_fused": true,
+            "bytes_in_use": 3840,
+            "peak_bytes_in_use": 143920896,
+            "calls": 3,
+            "total_batches": 18,
+            "total_cells": 1125000,
+            "total_padding_cells": 54648,
+            "total_upload_bytes": 150994944,
+            "total_download_bytes": 127401984
+          },
+          "jax_matmul_precision": "highest",
+          "velocity_set": "D3Q27",
+          "collision": "BGK",
+          "tau_min": 0.5187875751503006,
+          "tau_max": 0.5210665159043952,
+          "mach_max": 0.043301299870225574,
+          "thermal_fourier_max": 0.001637654713850669,
+          "thermal_robin_loss_max": 0.0,
+          "thermal_loss_coefficient_max": 0.010316623436171044,
+          "temperature_residual": 2.039635000758479e-06,
+          "eddy_viscosity_max_m2_s": 1.2154350688504983e-07,
+          "turbulent_conductivity_max_w_m_k": 0.5636426176685464,
+          "turbulence_model": "smagorinsky",
+          "smagorinsky_constant": 0.17,
+          "turbulent_prandtl": 0.9,
+          "flow_cells": 375000,
+          "solid_cells": 0,
+          "thermal_cells": 375000,
+          "rho_reference_kg_m3": 998.0,
+          "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+          "thermal_backend": "NumPy finite-volume on host",
+          "les_backend": "NumPy Smagorinsky host operator",
+          "property_backend": "NumPy material evaluator",
+          "full_field_transfers": null,
+          "snapshot_count": 0,
+          "snapshot_bytes": 0,
+          "device_scalar_transfers": null,
+          "timings": {
+            "first_step_s": 0.0,
+            "warm_compute_s": 0.0,
+            "save_s": 0.0,
+            "snapshots_s": 0.0
+          },
+          "warnings": [
+            "GPU+RAM: full state is stored in CPU RAM; only batched BGK collision runs on CUDA. Streaming, boundaries, thermal, LES and material evaluation run on CPU.",
+            "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+            "thermal advection/diffusion uses an explicit NumPy finite-volume update on the host"
+          ]
+        }
+      }
+    },
+    {
+      "total_cells": 3000000,
+      "elapsed_seconds": 51.32904294200125,
+      "peak_host_rss_mib": 3902.40625,
+      "samples": [
+        {
+          "step": 0,
+          "progress": 0.0,
+          "residual": 0.0,
+          "temperature_min": 293.15,
+          "temperature_max": 293.15,
+          "elapsed_seconds": 3.666847571992548
+        },
+        {
+          "step": 1,
+          "progress": 0.3333333333333333,
+          "residual": 1.0000004470348385,
+          "temperature_min": 293.15,
+          "temperature_max": 293.1505989980918,
+          "elapsed_seconds": 10.562387657992076
+        },
+        {
+          "step": 2,
+          "progress": 0.6666666666666666,
+          "residual": 0.5060192853767761,
+          "temperature_min": 293.15,
+          "temperature_max": 293.1511969197875,
+          "elapsed_seconds": 15.09750420000637
+        },
+        {
+          "step": 3,
+          "progress": 1.0,
+          "residual": 0.27530881032799837,
+          "temperature_min": 293.15,
+          "temperature_max": 293.15179376895554,
+          "elapsed_seconds": 19.573286444006953
+        }
+      ],
+      "result": {
+        "status": "completed",
+        "steps": 3,
+        "converged": false,
+        "diagnostics": {
+          "backend": "XLB D3Q27 BGK via JAX",
+          "compute_backend": "ram",
+          "device": "cuda:0-ram",
+          "device_actual": "cpu:0",
+          "state_device": "cpu:0",
+          "collision_device": "cuda:0",
+          "ram_offload": {
+            "batch_cells": 65536,
+            "batches": 46,
+            "cells": 3000000,
+            "valid_cells": 3000000,
+            "padded_cells": 3014656,
+            "padding_cells": 14656,
+            "upload_bytes": 385875968,
+            "download_bytes": 325582848,
+            "output_bytes": 324000000,
+            "jit_fused": true,
+            "bytes_in_use": 3840,
+            "peak_bytes_in_use": 143920896,
+            "calls": 3,
+            "total_batches": 138,
+            "total_cells": 9000000,
+            "total_padding_cells": 43968,
+            "total_upload_bytes": 1157627904,
+            "total_download_bytes": 976748544
+          },
+          "jax_matmul_precision": "highest",
+          "velocity_set": "D3Q27",
+          "collision": "BGK",
+          "tau_min": 0.5375751503006012,
+          "tau_max": 0.5398572410079232,
+          "mach_max": 0.043301299870225574,
+          "thermal_fourier_max": 0.002536151936824623,
+          "thermal_robin_loss_max": 0.0,
+          "thermal_loss_coefficient_max": 0.01660730848876352,
+          "temperature_residual": 2.035973105906725e-06,
+          "eddy_viscosity_max_m2_s": 6.085575219525334e-08,
+          "turbulent_conductivity_max_w_m_k": 0.2822108424102093,
+          "turbulence_model": "smagorinsky",
+          "smagorinsky_constant": 0.17,
+          "turbulent_prandtl": 0.9,
+          "flow_cells": 3000000,
+          "solid_cells": 0,
+          "thermal_cells": 3000000,
+          "rho_reference_kg_m3": 998.0,
+          "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+          "thermal_backend": "NumPy finite-volume on host",
+          "les_backend": "NumPy Smagorinsky host operator",
+          "property_backend": "NumPy material evaluator",
+          "full_field_transfers": null,
+          "snapshot_count": 0,
+          "snapshot_bytes": 0,
+          "device_scalar_transfers": null,
+          "timings": {
+            "first_step_s": 0.0,
+            "warm_compute_s": 0.0,
+            "save_s": 0.0,
+            "snapshots_s": 0.0
+          },
+          "warnings": [
+            "GPU+RAM: full state is stored in CPU RAM; only batched BGK collision runs on CUDA. Streaming, boundaries, thermal, LES and material evaluation run on CPU.",
+            "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+            "thermal advection/diffusion uses an explicit NumPy finite-volume update on the host"
+          ]
+        }
+      }
+    },
+    {
+      "total_cells": 9725376,
+      "elapsed_seconds": 163.6223124009848,
+      "peak_host_rss_mib": 9220.8125,
+      "samples": [
+        {
+          "step": 0,
+          "progress": 0.0,
+          "residual": 0.0,
+          "temperature_min": 293.15,
+          "temperature_max": 293.15,
+          "elapsed_seconds": 6.468357778998325
+        },
+        {
+          "step": 1,
+          "progress": 0.3333333333333333,
+          "residual": 1.0000004470348385,
+          "temperature_min": 293.15,
+          "temperature_max": 293.1505989980918,
+          "elapsed_seconds": 25.734229908994166
+        },
+        {
+          "step": 2,
+          "progress": 0.6666666666666666,
+          "residual": 0.5060180932835828,
+          "temperature_min": 293.15,
+          "temperature_max": 293.15119640311735,
+          "elapsed_seconds": 43.40148951698211
+        },
+        {
+          "step": 3,
+          "progress": 1.0,
+          "residual": 0.2772188999443933,
+          "temperature_min": 293.15,
+          "temperature_max": 293.1517922235502,
+          "elapsed_seconds": 59.49198739498388
+        }
+      ],
+      "result": {
+        "status": "completed",
+        "steps": 3,
+        "converged": false,
+        "diagnostics": {
+          "backend": "XLB D3Q27 BGK via JAX",
+          "compute_backend": "ram",
+          "device": "cuda:0-ram",
+          "device_actual": "cpu:0",
+          "state_device": "cpu:0",
+          "collision_device": "cuda:0",
+          "ram_offload": {
+            "batch_cells": 65536,
+            "batches": 149,
+            "cells": 9725376,
+            "valid_cells": 9725376,
+            "padded_cells": 9764864,
+            "padding_cells": 39488,
+            "upload_bytes": 1249902592,
+            "download_bytes": 1054605312,
+            "output_bytes": 1050340608,
+            "jit_fused": true,
+            "bytes_in_use": 3840,
+            "peak_bytes_in_use": 143920896,
+            "calls": 3,
+            "total_batches": 447,
+            "total_cells": 29176128,
+            "total_padding_cells": 118464,
+            "total_upload_bytes": 3749707776,
+            "total_download_bytes": 3163815936
+          },
+          "jax_matmul_precision": "highest",
+          "velocity_set": "D3Q27",
+          "collision": "BGK",
+          "tau_min": 0.5556112224448898,
+          "tau_max": 0.5578961520954485,
+          "mach_max": 0.043301299870225574,
+          "thermal_fourier_max": 0.0033987096222311904,
+          "thermal_robin_loss_max": 0.0,
+          "thermal_loss_coefficient_max": 0.022645746344097925,
+          "temperature_residual": 2.0324638931971226e-06,
+          "eddy_viscosity_max_m2_s": 4.1169903613670834e-08,
+          "turbulent_conductivity_max_w_m_k": 0.19092021315394075,
+          "turbulence_model": "smagorinsky",
+          "smagorinsky_constant": 0.17,
+          "turbulent_prandtl": 0.9,
+          "flow_cells": 9725376,
+          "solid_cells": 0,
+          "thermal_cells": 9725376,
+          "rho_reference_kg_m3": 998.0,
+          "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+          "thermal_backend": "NumPy finite-volume on host",
+          "les_backend": "NumPy Smagorinsky host operator",
+          "property_backend": "NumPy material evaluator",
+          "full_field_transfers": null,
+          "snapshot_count": 0,
+          "snapshot_bytes": 0,
+          "device_scalar_transfers": null,
+          "timings": {
+            "first_step_s": 0.0,
+            "warm_compute_s": 0.0,
+            "save_s": 0.0,
+            "snapshots_s": 0.0
+          },
+          "warnings": [
+            "GPU+RAM: full state is stored in CPU RAM; only batched BGK collision runs on CUDA. Streaming, boundaries, thermal, LES and material evaluation run on CPU.",
+            "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+            "thermal advection/diffusion uses an explicit NumPy finite-volume update on the host"
+          ]
+        }
+      }
+    }
+  ],
+  "source_sha256": {
+    "fields_jax.py": "45ca5c123e61ec2a61ee8e75845b73ad8fb57604ed64a261f6e64d6f4d8c0be9",
+    "geometry.py": "334e53a1e33c26e757ca30d0876d8e84536249d79fb0613a093787b94670dcc4",
+    "limits.py": "28db1f1ea581443b53bd2bde520ecae1e81a991e4ae810e468ea0a89ad5cd13e",
+    "material_csv.py": "1d1bd07e1f2f985479b4cc5a1d51b7e4bb95995faf423f3c38e8be104e07b94c",
+    "mesh_planning.py": "93f414f8e1a44f9057040696993c08f4429f52c808972810555a207c05b3047c",
+    "ram_backend.py": "e9ce1d4df27025c85b8ed2fe3baa3c9de921b30720b9e070044c255ffea83f9e",
+    "restart.py": "fef4bed94e7f4eb2eca622e01857f075d4ba0deb262cd7834596659c267142a9",
+    "results.py": "fec52ca371cfe64e18199b409b2803c465dba0236b6a703373edacbecec01874",
+    "schema.py": "0d508255256c4434f8ee6d3c8d1085884b31186e369b06a7e88234e5a078a8ed",
+    "server.py": "f083517be6d6ac894734476338e4a075c2250f3002f43ff403621bd6e8c6aeb6",
+    "snapshots.py": "5dea81b30ca864bd27e6bd7730c7365b891ed2897f64c08bc1540dfa85b09392",
+    "solver.py": "cc40e5e1e38667d7bdb8a9134ea158c174353556c9119439787452b4997800d3",
+    "thermal_jax.py": "eab09e7213b2bf49136f851025ed99595b143dd951866b862727ce7bbff165af",
+    "__init__.py": "c820b473aa0370059c6a6a2cd1ef4ccc9426e0560263cd588a408166d38f5e51"
+  }
+}

@@ -1,0 +1,5 @@
+# Optional: use this checkout's data/ instead of a Docker named volume.
+services:
+  workbench:
+    volumes:
+      - ./data:/data

@@ -1,0 +1,309 @@
+{
+  "purpose": "Execution and CPU/CUDA agreement; not turbulence benchmark validation",
+  "mesh": {
+    "shape": [
+      30,
+      10,
+      10
+    ],
+    "fluid_cells": 2600,
+    "total_cells": 3000,
+    "solid_cells": 400,
+    "limits": {
+      "max_total_cells": 10000000,
+      "max_axis_cells": 1024,
+      "max_boundary_link_mib": 512
+    },
+    "boundary_link_counts": {
+      "xmin": 100,
+      "xmax": 100,
+      "ymin": 260,
+      "ymax": 260,
+      "zmin": 300,
+      "zmax": 100
+    },
+    "origin": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "spacing": [
+      0.002,
+      0.002,
+      0.002
+    ],
+    "warnings": []
+  },
+  "runs": {
+    "cpu": {
+      "id": "c39cbfe9365447a9b57362ffdc0c3109",
+      "project_id": "664659dc271b4879b03a3021614323ea",
+      "name": "LES・共役熱伝達 GPU検証 / cpu",
+      "status": "completed",
+      "created_at": "2026-09-16T16:13:45.441594+00:00",
+      "progress": 1.0,
+      "history": [
+        {
+          "step": 0,
+          "progress": 0.0,
+          "residual": 0.0,
+          "temperature_min": 293.15,
+          "temperature_max": 293.15
+        },
+        {
+          "step": 20,
+          "progress": 0.2,
+          "residual": 0.9999999204469827,
+          "temperature_min": 293.15,
+          "temperature_max": 299.6736042112984
+        },
+        {
+          "step": 40,
+          "progress": 0.4,
+          "residual": 0.9015046772516261,
+          "temperature_min": 293.15,
+          "temperature_max": 304.6859924783465
+        },
+        {
+          "step": 60,
+          "progress": 0.6,
+          "residual": 0.846207634918133,
+          "temperature_min": 293.15,
+          "temperature_max": 308.56682986304213
+        },
+        {
+          "step": 80,
+          "progress": 0.8,
+          "residual": 0.281882804265339,
+          "temperature_min": 293.15,
+          "temperature_max": 311.6012290647793
+        },
+        {
+          "step": 100,
+          "progress": 1.0,
+          "residual": 0.1980678603246038,
+          "temperature_min": 293.15,
+          "temperature_max": 314.0027004395607
+        }
+      ],
+      "started_at": "2026-09-16T16:13:45.447569+00:00",
+      "phase": "finished",
+      "shape": [
+        30,
+        10,
+        10
+      ],
+      "origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spacing": [
+        0.002,
+        0.002,
+        0.002
+      ],
+      "fluid_cells": 2600,
+      "solid_cells": 400,
+      "mesh_warnings": [],
+      "step": 100,
+      "residual": 0.1980678603246038,
+      "temperature_min": 293.15,
+      "temperature_max": 314.0027004395607,
+      "steps": 100,
+      "converged": false,
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "compute_backend": "reference",
+        "device": "cpu",
+        "device_actual": "cpu:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5037899000918655,
+        "tau_max": 0.5066544757780927,
+        "mach_max": 0.04740623395500592,
+        "thermal_fourier_max": 0.004748365313003087,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.033186655902685505,
+        "temperature_residual": 0.007649677263777994,
+        "eddy_viscosity_max_m2_s": 7.72522866142039e-07,
+        "turbulent_conductivity_max_w_m_k": 3.5824769388373277,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 2600,
+        "solid_cells": 400,
+        "thermal_cells": 3000,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "NumPy finite-volume on host",
+        "les_backend": "NumPy Smagorinsky host operator",
+        "property_backend": "NumPy material evaluator",
+        "full_field_transfers": null,
+        "device_scalar_transfers": null,
+        "timings": {
+          "first_step_s": 0.0,
+          "warm_compute_s": 0.0,
+          "save_s": 0.0
+        },
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+          "thermal advection/diffusion uses an explicit NumPy finite-volume update on the host"
+        ]
+      },
+      "finished_at": "2026-09-16T16:13:54.644794+00:00",
+      "files": [
+        "fields.npz",
+        "fields.vtk",
+        "history.csv",
+        "input.json",
+        "mesh.npz",
+        "provenance.json",
+        "result.json"
+      ]
+    },
+    "cuda:0": {
+      "id": "617eee6bbfa548ad9141209a66e626cc",
+      "project_id": "fb9a6045a2654fdcb0a0c78b3a0def16",
+      "name": "LES・共役熱伝達 GPU検証 / cuda:0",
+      "status": "completed",
+      "created_at": "2026-09-16T16:13:55.563720+00:00",
+      "progress": 1.0,
+      "history": [
+        {
+          "step": 0,
+          "progress": 0.0,
+          "residual": 0.0,
+          "temperature_min": 293.15,
+          "temperature_max": 293.15
+        },
+        {
+          "step": 20,
+          "progress": 0.2,
+          "residual": 1.0,
+          "temperature_min": 293.15,
+          "temperature_max": 299.67360421129825
+        },
+        {
+          "step": 40,
+          "progress": 0.4,
+          "residual": 0.9015116095542908,
+          "temperature_min": 293.15,
+          "temperature_max": 304.685992478592
+        },
+        {
+          "step": 60,
+          "progress": 0.6,
+          "residual": 0.8462040424346924,
+          "temperature_min": 293.15,
+          "temperature_max": 308.5668298667264
+        },
+        {
+          "step": 80,
+          "progress": 0.8,
+          "residual": 0.2818893492221832,
+          "temperature_min": 293.15,
+          "temperature_max": 311.6012290739785
+        },
+        {
+          "step": 100,
+          "progress": 1.0,
+          "residual": 0.198077991604805,
+          "temperature_min": 293.15,
+          "temperature_max": 314.00270044722055
+        }
+      ],
+      "started_at": "2026-09-16T16:13:55.569218+00:00",
+      "phase": "finished",
+      "shape": [
+        30,
+        10,
+        10
+      ],
+      "origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spacing": [
+        0.002,
+        0.002,
+        0.002
+      ],
+      "fluid_cells": 2600,
+      "solid_cells": 400,
+      "mesh_warnings": [],
+      "step": 100,
+      "residual": 0.198077991604805,
+      "temperature_min": 293.15,
+      "temperature_max": 314.00270044722055,
+      "steps": 100,
+      "converged": false,
+      "diagnostics": {
+        "backend": "XLB D3Q27 BGK via JAX",
+        "compute_backend": "device",
+        "device": "cuda:0",
+        "device_actual": "cuda:0",
+        "jax_matmul_precision": "highest",
+        "velocity_set": "D3Q27",
+        "collision": "BGK",
+        "tau_min": 0.5037899096634804,
+        "tau_max": 0.5066544566790652,
+        "mach_max": 0.047406166791915894,
+        "thermal_fourier_max": 0.004748365313047199,
+        "thermal_robin_loss_max": 0.0,
+        "thermal_loss_coefficient_max": 0.033186655902101125,
+        "temperature_residual": 0.007649677255241813,
+        "eddy_viscosity_max_m2_s": 7.725177730679985e-07,
+        "turbulent_conductivity_max_w_m_k": 3.5824533203515876,
+        "turbulence_model": "smagorinsky",
+        "smagorinsky_constant": 0.17,
+        "turbulent_prandtl": 0.9,
+        "flow_cells": 2600,
+        "solid_cells": 400,
+        "thermal_cells": 3000,
+        "rho_reference_kg_m3": 998.0,
+        "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+        "thermal_backend": "JAX finite-volume on device",
+        "les_backend": "JAX Smagorinsky device operator",
+        "property_backend": "JAX material evaluator on device",
+        "full_field_transfers": 1,
+        "device_scalar_transfers": 1483,
+        "timings": {
+          "first_step_s": 3.413372053008061,
+          "warm_compute_s": 4.1257016940217,
+          "save_s": 0.28496209999138955
+        },
+        "warnings": [
+          "Smagorinsky LES uses cell-centred gradients, voxel walls, and first-order thermal advection; short runs are not a turbulence benchmark",
+          "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+        ]
+      },
+      "finished_at": "2026-09-16T16:14:07.288926+00:00",
+      "files": [
+        "fields.npz",
+        "fields.vtk",
+        "history.csv",
+        "input.json",
+        "mesh.npz",
+        "provenance.json",
+        "result.json"
+      ]
+    }
+  },
+  "comparison": {
+    "temperature": {
+      "max_absolute_difference": 3.0517578125e-05
+    },
+    "velocity": {
+      "max_absolute_difference": 2.2677704691886902e-07
+    },
+    "pressure": {
+      "max_absolute_difference": 7.617473602294922e-05
+    },
+    "eddy_viscosity": {
+      "max_absolute_difference": 1.722355591482483e-11
+    }
+  }
+}

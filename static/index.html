@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07151d">
+  <title>XLB Workbench</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup" aria-label="XLB Workbench">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <div class="brand-name">XLB <em>Workbench</em></div>
+          <div class="brand-subtitle">Lattice Boltzmann Simulation Studio</div>
+        </div>
+      </div>
+      <div class="document-meta">
+        <span id="connectionBadge" class="status-badge neutral"><span class="status-dot"></span>接続確認中</span>
+        <span id="projectTitle" class="document-title">無題のモデル</span>
+        <span id="dirtyBadge" class="dirty-badge hidden">未保存</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-button" type="button" data-action="toggle-help" aria-label="ヘルプ" title="ヘルプ">?</button>
+      </div>
+    </header>
+
+    <nav class="ribbon" aria-label="メインツールバー">
+      <div class="ribbon-group">
+        <span class="ribbon-label">ファイル</span>
+        <div class="ribbon-buttons">
+          <button type="button" class="ribbon-button" data-action="new-project" title="新規プロジェクト">
+            <span class="ribbon-icon">＋</span><span>新規</span>
+          </button>
+          <button type="button" class="ribbon-button" data-action="open-project" title="保存済みプロジェクトを開く">
+            <span class="ribbon-icon">▣</span><span>開く</span>
+          </button>
+          <button type="button" class="ribbon-button" data-action="save-project" title="プロジェクトを保存">
+            <span class="ribbon-icon">▰</span><span>保存</span>
+          </button>
+          <button type="button" class="ribbon-button" data-action="export-project" title="ZIP で書き出す">
+            <span class="ribbon-icon">⇩</span><span>書き出し</span>
+          </button>
+          <button type="button" class="ribbon-button" data-action="import-project" title="ZIP プロジェクトを読み込む">
+            <span class="ribbon-icon">⇧</span><span>読み込み</span>
+          </button>
+        </div>
+      </div>
+      <div class="ribbon-separator" aria-hidden="true"></div>
+      <div class="ribbon-group">
+        <span class="ribbon-label">ジオメトリ</span>
+        <div class="ribbon-buttons">
+          <button type="button" class="ribbon-button" data-action="select-geometry" title="ボックス領域を編集">
+            <span class="ribbon-icon">□</span><span>ボックス</span>
+          </button>
+          <button type="button" class="ribbon-button" data-action="import-cad" title="STL / OBJ / STEP / IGES / BREP を読み込む">
+            <span class="ribbon-icon">◇</span><span>CAD読込</span>
+          </button>
+          <button type="button" class="ribbon-button" data-action="build-mesh" title="メッシュを生成">
+            <span class="ribbon-icon">▦</span><span>メッシュ生成</span>
+          </button>
+        </div>
+      </div>
+      <div class="ribbon-separator" aria-hidden="true"></div>
+      <div class="ribbon-group simulation-group">
+        <span class="ribbon-label">計算</span>
+        <div class="ribbon-buttons">
+          <button type="button" class="ribbon-button primary" data-action="run-simulation" title="計算を開始">
+            <span class="ribbon-icon play-icon">▶</span><span>開始</span>
+          </button>
+          <button type="button" class="ribbon-button stop-button" data-action="stop-simulation" title="計算を停止" disabled>
+            <span class="ribbon-icon">■</span><span>停止</span>
+          </button>
+          <button type="button" class="ribbon-button" data-action="select-study" title="計算条件を編集">
+            <span class="ribbon-icon">⚙</span><span>スタディ</span>
+          </button>
+        </div>
+      </div>
+      <div class="ribbon-spacer"></div>
+      <div class="ribbon-run-state" id="ribbonRunState"><span class="pulse-dot"></span><span>Ready</span></div>
+    </nav>
+
+    <main class="workspace">
+      <aside class="model-pane panel-surface" aria-label="モデルツリー">
+        <div class="pane-heading">
+          <div>
+            <span class="eyebrow">MODEL BUILDER</span>
+            <h1>モデル</h1>
+          </div>
+          <button type="button" class="small-icon-button" data-action="new-project" aria-label="新規プロジェクト" title="新規プロジェクト">＋</button>
+        </div>
+        <div class="model-summary">
+          <div class="model-summary-icon">∿</div>
+          <div class="model-summary-copy">
+            <strong id="modelSummaryName">無題のモデル</strong>
+            <span id="modelSummaryType">未保存プロジェクト</span>
+          </div>
+          <span id="modelSummaryState" class="mini-state">編集</span>
+        </div>
+        <nav id="modelTree" class="model-tree" aria-label="モデルツリー" role="tree"></nav>
+        <div class="tree-footer">
+          <span class="legend-dot teal"></span><span>定義済み</span>
+          <span class="legend-dot amber"></span><span>要確認</span>
+        </div>
+      </aside>
+
+      <section class="inspector-pane panel-surface" aria-label="プロパティ">
+        <div class="pane-heading inspector-heading">
+          <div>
+            <span class="eyebrow">SETTINGS</span>
+            <h2 id="inspectorTitle">ジオメトリ</h2>
+          </div>
+          <span id="inspectorType" class="type-pill">GEOMETRY</span>
+        </div>
+        <div id="inspector" class="inspector-scroll" tabindex="0"></div>
+        <div class="inspector-footer">
+          <div id="validationSummary" class="validation-summary" aria-live="polite"></div>
+          <button type="button" class="text-button" data-action="validate-project">検証する <span>→</span></button>
+        </div>
+      </section>
+
+      <section class="viewport-pane panel-surface" aria-label="グラフィックスと解析結果">
+        <div class="viewport-toolbar">
+          <div class="view-tabs" role="tablist" aria-label="ビュー">
+            <button type="button" class="view-tab active" data-view="geometry" role="tab" aria-selected="true">モデルビュー</button>
+            <button type="button" class="view-tab" data-view="results" role="tab" aria-selected="false">結果ビュー</button>
+          </div>
+          <div class="viewport-actions">
+            <button type="button" class="view-action" data-action="fit-view" title="モデルを画面に合わせる">フィット</button>
+            <button type="button" class="view-action" data-action="reset-view" title="表示角度をリセット">視点リセット</button>
+            <button type="button" class="view-action" data-action="toggle-grid" aria-pressed="true" title="グリッド表示を切り替え">グリッド</button>
+          </div>
+        </div>
+        <div class="viewport-stage">
+          <div id="geometryView" class="geometry-view" role="tabpanel" aria-label="モデルビュー">
+            <canvas id="geometryCanvas" aria-label="3D ジオメトリプレビュー"></canvas>
+            <div class="canvas-hint"><span class="mouse-icon">●</span> 面をクリックして境界を選択　<span class="mouse-icon">↔</span> ドラッグで回転　<span class="mouse-icon">◒</span> ホイールでズーム</div>
+            <div id="geometryOverlay" class="viewport-overlay">
+              <span class="overlay-kicker">GEOMETRY PREVIEW</span>
+              <strong id="geometryOverlayTitle">流体領域</strong>
+              <span id="geometryOverlaySub">ボックス / 60 × 20 × 20 mm</span>
+            </div>
+            <div id="meshBadge" class="mesh-badge hidden"><span class="mesh-badge-icon">▦</span><span id="meshBadgeText">メッシュ未生成</span></div>
+          </div>
+          <div id="resultsView" class="results-view hidden" role="tabpanel" aria-label="結果ビュー">
+            <canvas id="resultCanvas" aria-label="解析結果スライス"></canvas>
+            <div id="resultEmpty" class="result-empty">
+              <div class="result-empty-icon">∿</div>
+              <strong>結果データはまだありません</strong>
+              <span id="resultEmptyMessage">計算を開始すると、ここに実データのフィールドが表示されます。</span>
+              <button type="button" class="button primary compact" data-action="run-simulation">計算を開始</button>
+            </div>
+            <div id="resultOverlay" class="result-overlay hidden">
+              <span class="overlay-kicker" id="resultFieldLabel">TEMPERATURE</span>
+              <strong id="resultSliceTitle">温度分布</strong>
+              <span id="resultSliceSub">z = 5 / 10</span>
+            </div>
+          </div>
+          <div id="runOverlay" class="run-overlay hidden" aria-live="polite">
+            <div class="run-overlay-head"><span class="pulse-dot"></span><span id="runStatusLabel">計算中</span><span id="runProgressLabel">0%</span></div>
+            <div class="progress-track"><div id="runProgressBar" class="progress-value"></div></div>
+            <div class="run-metrics"><span id="runStepMetric">step —</span><span id="runResidualMetric">residual —</span><span id="runTemperatureMetric">T —</span></div>
+          </div>
+        </div>
+        <div class="viewport-statusbar">
+          <div class="statusbar-item"><span class="statusbar-label">座標系</span><strong>Cartesian</strong></div>
+          <div class="statusbar-divider"></div>
+          <div class="statusbar-item"><span class="statusbar-label">単位</span><strong>SI / m</strong></div>
+          <div class="statusbar-divider"></div>
+          <div class="statusbar-item"><span class="statusbar-label">セル</span><strong id="statusCellCount">—</strong></div>
+          <div class="statusbar-spacer"></div>
+          <div class="statusbar-item view-coordinate"><span id="cursorCoordinate">x 0.000  y 0.000  z 0.000</span></div>
+        </div>
+      </section>
+
+      <section class="bottom-dock panel-surface" aria-label="ログと履歴">
+        <div class="dock-tabs" role="tablist" aria-label="ログと履歴">
+          <button type="button" class="dock-tab active" data-dock="log" role="tab" aria-selected="true"><span class="dock-icon">≡</span>ログ <span id="logCount" class="tab-count">0</span></button>
+          <button type="button" class="dock-tab" data-dock="history" role="tab" aria-selected="false"><span class="dock-icon">⌁</span>残差モニター</button>
+          <button type="button" class="dock-tab" data-dock="validation" role="tab" aria-selected="false"><span class="dock-icon">✓</span>検証</button>
+        </div>
+        <div class="dock-content">
+          <div id="logDock" class="dock-panel active" role="tabpanel">
+            <div id="logList" class="log-list" aria-live="polite"></div>
+          </div>
+          <div id="historyDock" class="dock-panel" role="tabpanel" hidden>
+            <div class="history-layout">
+              <canvas id="historyCanvas" aria-label="速度・圧力・温度の相対変化（対数軸）"></canvas>
+              <div id="historyStats" class="history-stats"></div>
+            </div>
+          </div>
+          <div id="validationDock" class="dock-panel" role="tabpanel" hidden>
+            <div id="validationList" class="validation-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="projectDialog" class="modal-dialog" aria-labelledby="projectDialogTitle">
+    <div class="modal-card">
+      <div class="modal-head"><div><span class="eyebrow">PROJECTS</span><h2 id="projectDialogTitle">プロジェクトを開く</h2></div><button type="button" class="dialog-close" data-action="close-project-dialog" aria-label="閉じる">×</button></div>
+      <div id="projectList" class="project-list"></div>
+      <div class="modal-foot"><span class="muted">保存済みプロジェクトを選択してください</span><button type="button" class="button ghost" data-action="close-project-dialog">キャンセル</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="cadDialog" class="modal-dialog" aria-labelledby="cadDialogTitle">
+    <div class="modal-card narrow">
+      <div class="modal-head"><div><span class="eyebrow">GEOMETRY IMPORT</span><h2 id="cadDialogTitle">CAD を読み込む</h2></div><button type="button" class="dialog-close" data-action="close-cad-dialog" aria-label="閉じる">×</button></div>
+      <div class="drop-zone" id="cadDropZone"><div class="drop-zone-icon">◇</div><strong>STL / OBJ / STEP / IGES / BREP</strong><span>ファイルを選択、またはここにドロップ</span><input id="cadFile" type="file" accept=".stl,.obj,.step,.stp,.iges,.igs,.brep" hidden><button type="button" class="button secondary compact" data-action="choose-cad-file">ファイルを選択</button><div id="cadFileName" class="selected-file hidden"></div></div>
+      <div class="form-field"><label for="cadUnit">入力単位</label><select id="cadUnit"><option value="m">m</option><option value="mm" selected>mm</option><option value="cm">cm</option><option value="in">in</option></select><small>インポート時に SI 単位（m）へ変換します。</small></div>
+      <div class="modal-foot"><span id="cadImportStatus" class="muted"></span><button type="button" class="button ghost" data-action="close-cad-dialog">キャンセル</button><button type="button" class="button primary" data-action="confirm-cad-import">読み込む</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="materialCsvDialog" class="modal-dialog" aria-labelledby="materialCsvDialogTitle">
+    <div class="modal-card">
+      <div class="modal-head"><div><span class="eyebrow">MATERIAL IMPORT</span><h2 id="materialCsvDialogTitle">材料 CSV を確認</h2></div><button type="button" class="dialog-close" data-action="close-material-csv" aria-label="閉じる">×</button></div>
+      <div id="materialCsvPreview" class="csv-preview"><div class="info-note">CSV ファイルを選択すると、適用前に内容を確認できます。</div></div>
+      <div class="modal-foot"><span class="muted">適用するまで材料は変更されません</span><button type="button" class="button ghost" data-action="close-material-csv">キャンセル</button><button type="button" class="button primary" data-action="apply-material-csv" disabled>現在の材料へ適用</button></div>
+    </div>
+  </dialog>
+
+  <input id="projectFile" type="file" accept=".zip,application/zip" hidden>
+  <input id="materialCsvFile" type="file" accept=".csv,text/csv" data-max-bytes="1048576" hidden>
+  <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <div id="helpPopover" class="help-popover hidden" role="status"><strong>XLB Workbench</strong><span>左のモデルツリーから項目を選択し、中央で条件を編集します。右のビューはドラッグで回転できます。</span></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+/data/
+/development_archive/
+.env
+.env.*
+!.env.example
+tests/
+docs/
+.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+.git/
+*.log

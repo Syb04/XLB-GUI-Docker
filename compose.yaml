@@ -1,0 +1,19 @@
+services:
+  workbench:
+    build: .
+    image: xlb-workbench:0.1.0
+    ports:
+      - "127.0.0.1:${XLB_PORT:-8766}:8766"
+    environment:
+      XLA_PYTHON_CLIENT_PREALLOCATE: "false"
+      XLB_MAX_TOTAL_CELLS: "${XLB_MAX_TOTAL_CELLS:-10000000}"
+      XLB_MAX_AXIS_CELLS: "${XLB_MAX_AXIS_CELLS:-1024}"
+      XLB_MAX_BOUNDARY_LINK_MIB: "${XLB_MAX_BOUNDARY_LINK_MIB:-512}"
+      XLB_COMPUTE_BACKEND: "${XLB_COMPUTE_BACKEND:-auto}"
+    volumes:
+      - workbench-data:/data
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+volumes:
+  workbench-data:

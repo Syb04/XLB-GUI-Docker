@@ -1,0 +1,15 @@
+# Numerical/API versions exercised by this project; XLB source is commit-pinned.
+xlb @ git+https://github.com/Autodesk/XLB.git@9470e54a8d7ccd68d8e5563ca7a573040841ea8c
+warp-lang==1.10.0
+numpy==2.5.2
+scipy==1.18.1
+trimesh==5.1.0
+gmsh==4.15.2
+rtree==1.4.1
+jax==0.11.1
+jaxlib==0.11.1
+matplotlib==3.11.1
+pyvista==0.48.4
+numpy-stl==4.0.0
+pydantic==2.13.5
+nvtx==0.2.16

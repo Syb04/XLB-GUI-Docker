@@ -1,0 +1,98 @@
+[
+  {
+    "preset": "water-temperature",
+    "csv_rows": 19,
+    "steps": 3,
+    "status": "completed",
+    "diagnostics": {
+      "backend": "XLB D3Q27 BGK via JAX",
+      "compute_backend": "device",
+      "device": "cuda:0",
+      "device_actual": "cuda:0",
+      "jax_matmul_precision": "highest",
+      "velocity_set": "D3Q27",
+      "collision": "BGK",
+      "tau_min": 0.5001204070241492,
+      "tau_max": 0.500120407409524,
+      "mach_max": 0.0034641016151377548,
+      "thermal_fourier_max": 5.727335752368342e-06,
+      "thermal_robin_loss_max": 0.0,
+      "thermal_loss_coefficient_max": 4.0091338731698574e-05,
+      "temperature_residual": 1.6334930323138558e-07,
+      "eddy_viscosity_max_m2_s": 0.0,
+      "turbulent_conductivity_max_w_m_k": 0.0,
+      "turbulence_model": "laminar",
+      "smagorinsky_constant": 0.17,
+      "turbulent_prandtl": 0.9,
+      "flow_cells": 128,
+      "solid_cells": 0,
+      "thermal_cells": 128,
+      "rho_reference_kg_m3": 998.2071505,
+      "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+      "thermal_backend": "JAX finite-volume on device",
+      "les_backend": "disabled (laminar)",
+      "property_backend": "JAX material evaluator on device",
+      "full_field_transfers": 1,
+      "snapshot_count": 0,
+      "snapshot_bytes": 0,
+      "device_scalar_transfers": 103,
+      "timings": {
+        "first_step_s": 2.826945042004809,
+        "warm_compute_s": 0.0521646479901392,
+        "save_s": 0.1003206199966371,
+        "snapshots_s": 0.0
+      },
+      "warnings": [
+        "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+      ]
+    }
+  },
+  {
+    "preset": "air-temperature",
+    "csv_rows": 36,
+    "steps": 3,
+    "status": "completed",
+    "diagnostics": {
+      "backend": "XLB D3Q27 BGK via JAX",
+      "compute_backend": "device",
+      "device": "cuda:0",
+      "device_actual": "cuda:0",
+      "jax_matmul_precision": "highest",
+      "velocity_set": "D3Q27",
+      "collision": "BGK",
+      "tau_min": 0.5018136526920409,
+      "tau_max": 0.5018160345657653,
+      "mach_max": 0.0034641016151377548,
+      "thermal_fourier_max": 0.0008556731862774761,
+      "thermal_robin_loss_max": 0.0,
+      "thermal_loss_coefficient_max": 0.005977978941567415,
+      "temperature_residual": 0.0005616173209797981,
+      "eddy_viscosity_max_m2_s": 0.0,
+      "turbulent_conductivity_max_w_m_k": 0.0,
+      "turbulence_model": "laminar",
+      "smagorinsky_constant": 0.17,
+      "turbulent_prandtl": 0.9,
+      "flow_cells": 128,
+      "solid_cells": 0,
+      "thermal_cells": 128,
+      "rho_reference_kg_m3": 1.204575182,
+      "density_model": "reference-density incompressible LBM; local density(T) is used in thermal storage/diffusion coefficients",
+      "thermal_backend": "JAX finite-volume on device",
+      "les_backend": "disabled (laminar)",
+      "property_backend": "JAX material evaluator on device",
+      "full_field_transfers": 1,
+      "snapshot_count": 0,
+      "snapshot_bytes": 0,
+      "device_scalar_transfers": 103,
+      "timings": {
+        "first_step_s": 1.9710513750032987,
+        "warm_compute_s": 0.08849939398351125,
+        "save_s": 0.0987597230123356,
+        "snapshots_s": 0.0
+      },
+      "warnings": [
+        "thermal advection/diffusion uses an explicit JAX finite-volume update on the selected device"
+      ]
+    }
+  }
+]

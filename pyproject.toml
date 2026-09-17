@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xlb-thermal-workbench"
+version = "0.1.0"
+description = "Local model-tree workbench for XLB flow and thermal transport"
+requires-python = ">=3.12"
+
+[tool.setuptools]
+packages = ["workbench"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
