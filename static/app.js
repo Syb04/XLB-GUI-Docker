@@ -139,7 +139,7 @@
     activeDock: 'log',
     view: 'geometry',
     showGrid: true,
-    orbit: { yaw: -0.58, pitch: 0.34, zoom: 1 },
+    orbit: { yaw: -0.58, pitch: 0.34, zoom: 1, panX: 0, panY: 0 },
     drag: null,
     cadFile: null,
     cadImportTarget: 'fluid',
@@ -2386,6 +2386,9 @@
     }
     if (action === 'fit-view') fitView();
     if (action === 'reset-view') resetView();
+    if (action === 'zoom-in') changeZoom(1.15);
+    if (action === 'zoom-out') changeZoom(1 / 1.15);
+    if (action === 'view-axis') setViewAxis(element.dataset.axis);
     if (action === 'toggle-grid') toggleGrid(element);
     if (action === 'toggle-help') toggleHelp();
     if (action === 'add-boundary') addBoundary();
@@ -3674,6 +3677,15 @@
     return [x1, y * cp - z1 * sp, y * sp + z1 * cp];
   }
 
+  function projectGeometryPoint(point, center, scale, width, height) {
+    const rotated = rotate3d(point, center);
+    return [
+      width / 2 + (state.orbit.panX || 0) + rotated[0] * scale,
+      height / 2 + (state.orbit.panY || 0) - rotated[1] * scale,
+      rotated[2]
+    ];
+  }
+
   function drawGeometry() {
     const canvas = $('#geometryCanvas');
     const info = resizeCanvas(canvas);
@@ -3697,7 +3709,7 @@
     state.projectedFaces = [];
     layers.forEach((layer) => {
       const layerPoints = layer.points || [];
-      const projected = layerPoints.map((point) => { const rotated = rotate3d(point, center); return [width / 2 + rotated[0] * scale, height / 2 - rotated[1] * scale, rotated[2]]; });
+      const projected = layerPoints.map((point) => projectGeometryPoint(point, center, scale, width, height));
       const faces = Array.isArray(layer.faces) ? layer.faces : [];
       const faceGroups = layer.faceGroups || [];
       const source = layer.source || '';
@@ -3734,7 +3746,7 @@
         ctx.fill(); ctx.lineWidth = highlighted ? 1.6 : layer.role === 'solid' ? 1.25 : 1; ctx.stroke();
       });
     });
-    const projectedMesh = meshPoints.map((point) => { const rotated = rotate3d(point, center); return [width / 2 + rotated[0] * scale, height / 2 - rotated[1] * scale, rotated[2]]; });
+    const projectedMesh = meshPoints.map((point) => projectGeometryPoint(point, center, scale, width, height));
     if (state.mesh && projectedMesh.length <= 4500) {
       ctx.fillStyle = 'rgba(161, 243, 230, .65)';
       projectedMesh.forEach((point) => { ctx.beginPath(); ctx.arc(point[0], point[1], 1.35, 0, Math.PI * 2); ctx.fill(); });
@@ -3761,7 +3773,7 @@
     const edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
     solids.forEach((solid) => {
       const origin = solid.origin || [0, 0, 0]; const end = origin.map((value, index) => value + (solid.size?.[index] || 0));
-      const corners = [[origin[0], origin[1], origin[2]], [end[0], origin[1], origin[2]], [end[0], end[1], origin[2]], [origin[0], end[1], origin[2]], [origin[0], origin[1], end[2]], [end[0], origin[1], end[2]], [end[0], end[1], end[2]], [origin[0], end[1], end[2]]].map((point) => { const rotated = rotate3d(point, center); return [width / 2 + rotated[0] * scale, height / 2 - rotated[1] * scale, rotated[2]]; });
+      const corners = [[origin[0], origin[1], origin[2]], [end[0], origin[1], origin[2]], [end[0], end[1], origin[2]], [origin[0], end[1], origin[2]], [origin[0], origin[1], end[2]], [end[0], origin[1], end[2]], [end[0], end[1], end[2]], [origin[0], end[1], end[2]]].map((point) => projectGeometryPoint(point, center, scale, width, height));
       ctx.save(); ctx.fillStyle = 'rgba(234, 183, 101, .17)'; ctx.strokeStyle = 'rgba(234, 183, 101, .82)'; ctx.lineWidth = 1;
       [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6]].forEach((face) => { ctx.beginPath(); ctx.moveTo(corners[face[0]][0], corners[face[0]][1]); face.slice(1).forEach((index) => ctx.lineTo(corners[index][0], corners[index][1])); ctx.closePath(); ctx.fill(); ctx.stroke(); });
       ctx.fillStyle = '#f1c77a'; ctx.font = '10px ' + getComputedStyle(document.body).fontFamily; ctx.fillText(solid.name || 'solid', corners[0][0] + 4, corners[0][1] - 4); ctx.restore();
@@ -3785,12 +3797,35 @@
   function drawAxisTriad(ctx, x, y) {
     const length = 27;
     ctx.save(); ctx.lineWidth = 1.5; ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
-    [[1, 0, '#e77d7b', 'X'], [0, -1, '#5cd29d', 'Y'], [-.7, .5, '#5ca8ed', 'Z']].forEach(([dx, dy, color, label]) => { ctx.strokeStyle = color; ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx * length, y + dy * length); ctx.stroke(); ctx.fillText(label, x + dx * (length + 5), y + dy * (length + 5)); });
+    ctx.fillStyle = 'rgba(7, 21, 29, .78)'; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+    [[[1, 0, 0], '#e77d7b', 'X'], [[0, 1, 0], '#5cd29d', 'Y'], [[0, 0, 1], '#5ca8ed', 'Z']].forEach(([axis, color, label]) => {
+      // The same yaw/pitch transform used for the model keeps this triad an
+      // orientation indicator rather than a fixed screen-space decoration.
+      const rotated = rotate3d(axis, [0, 0, 0]);
+      const magnitude = Math.hypot(rotated[0], rotated[1]);
+      const screenMagnitude = magnitude || 1;
+      const dx = rotated[0] / screenMagnitude; const dy = -rotated[1] / screenMagnitude;
+      ctx.strokeStyle = color; ctx.fillStyle = color;
+      if (magnitude < .18) {
+        ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillText(label, x + 6, y - 6); return;
+      }
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx * length, y + dy * length); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x + dx * length, y + dy * length, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillText(label, x + dx * (length + 6), y + dy * (length + 6));
+    });
     ctx.restore();
   }
 
-  function resetView() { state.orbit = { yaw: -0.58, pitch: 0.34, zoom: 1 }; drawGeometry(); }
-  function fitView() { state.orbit.zoom = 1; drawGeometry(); }
+  function resetView() { state.orbit = { yaw: -0.58, pitch: 0.34, zoom: 1, panX: 0, panY: 0 }; drawGeometry(); }
+  function fitView() { state.orbit.zoom = 1; state.orbit.panX = 0; state.orbit.panY = 0; drawGeometry(); }
+  function changeZoom(factor) { state.orbit.zoom = clamp(state.orbit.zoom * factor, .35, 3.2); drawGeometry(); }
+  function setViewAxis(axis) {
+    const presets = { x: { yaw: Math.PI / 2, pitch: 0 }, y: { yaw: 0, pitch: Math.PI / 2 }, z: { yaw: 0, pitch: 0 } };
+    const preset = presets[axis]; if (!preset) return;
+    state.orbit = { ...state.orbit, ...preset, panX: 0, panY: 0 };
+    drawGeometry();
+  }
   function toggleGrid(button) { state.showGrid = !state.showGrid; button.setAttribute('aria-pressed', String(state.showGrid)); drawGeometry(); }
   function toggleHelp() { $('#helpPopover')?.classList.toggle('hidden'); }
 
@@ -3987,28 +4022,50 @@
     const view = $('#geometryView');
     if (!view) return;
     view.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0) return;
-      state.drag = { x: event.clientX, y: event.clientY, yaw: state.orbit.yaw, pitch: state.orbit.pitch, moved: false, pointerId: event.pointerId };
-      view.classList.add('dragging');
+      if (![0, 1, 2].includes(event.button)) return;
+      const mode = event.button === 0 && !event.shiftKey ? 'orbit' : 'pan';
+      state.drag = { x: event.clientX, y: event.clientY, yaw: state.orbit.yaw, pitch: state.orbit.pitch, panX: state.orbit.panX || 0, panY: state.orbit.panY || 0, mode, moved: false, pointerId: event.pointerId };
+      view.classList.toggle('dragging', mode === 'orbit');
+      view.classList.toggle('panning', mode === 'pan');
       view.setPointerCapture?.(event.pointerId);
     });
     view.addEventListener('pointermove', (event) => {
       if (!state.drag || state.drag.pointerId !== event.pointerId) return;
       const deltaX = event.clientX - state.drag.x; const deltaY = event.clientY - state.drag.y;
       if (Math.hypot(deltaX, deltaY) > 6) state.drag.moved = true;
-      state.orbit.yaw = state.drag.yaw + deltaX * .01;
-      state.orbit.pitch = clamp(state.drag.pitch + deltaY * .01, -.95, .95);
+      if (state.drag.mode === 'pan') {
+        state.orbit.panX = state.drag.panX + deltaX;
+        state.orbit.panY = state.drag.panY + deltaY;
+      } else {
+        state.orbit.yaw = state.drag.yaw + deltaX * .01;
+        state.orbit.pitch = clamp(state.drag.pitch + deltaY * .01, -1.53, 1.53);
+      }
       drawGeometry();
     });
     const endDrag = (event) => {
       if (!state.drag || state.drag.pointerId !== event.pointerId) return;
       const drag = state.drag;
       if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 6) drag.moved = true;
-      state.drag = null; view.classList.remove('dragging'); view.releasePointerCapture?.(event.pointerId);
-      if (drag && !drag.moved && event.type !== 'pointercancel') pickSurface(event.clientX, event.clientY, view);
+      state.drag = null; view.classList.remove('dragging', 'panning'); view.releasePointerCapture?.(event.pointerId);
+      if (drag?.mode === 'orbit' && !drag.moved && event.type !== 'pointercancel') pickSurface(event.clientX, event.clientY, view);
     };
     view.addEventListener('pointerup', endDrag); view.addEventListener('pointercancel', endDrag); view.addEventListener('pointerleave', (event) => { if (state.drag && event.buttons === 0) endDrag(event); });
-    view.addEventListener('wheel', (event) => { event.preventDefault(); state.orbit.zoom = clamp(state.orbit.zoom * (event.deltaY < 0 ? 1.08 : .92), .35, 3.2); drawGeometry(); }, { passive: false });
+    view.addEventListener('contextmenu', (event) => event.preventDefault());
+    view.addEventListener('dblclick', () => fitView());
+    view.addEventListener('wheel', (event) => { event.preventDefault(); changeZoom(event.deltaY < 0 ? 1.08 : .92); }, { passive: false });
+    view.addEventListener('keydown', (event) => {
+      const step = event.shiftKey ? .22 : .1;
+      if (event.key === 'ArrowLeft') { state.orbit.yaw -= step; }
+      else if (event.key === 'ArrowRight') { state.orbit.yaw += step; }
+      else if (event.key === 'ArrowUp') { state.orbit.pitch = clamp(state.orbit.pitch - step, -1.53, 1.53); }
+      else if (event.key === 'ArrowDown') { state.orbit.pitch = clamp(state.orbit.pitch + step, -1.53, 1.53); }
+      else if (event.key === '+' || event.key === '=') { changeZoom(1.15); event.preventDefault(); return; }
+      else if (event.key === '-' || event.key === '_') { changeZoom(1 / 1.15); event.preventDefault(); return; }
+      else if (event.key.toLowerCase() === 'f') { fitView(); event.preventDefault(); return; }
+      else if (event.key === '0') { resetView(); event.preventDefault(); return; }
+      else return;
+      event.preventDefault(); drawGeometry();
+    });
   }
 
   function pointInTriangleDepth(x, y, first, second, third) {

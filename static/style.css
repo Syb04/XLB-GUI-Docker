@@ -247,11 +247,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .viewport-actions { display: flex; gap: 5px; align-items: center; }
 .view-action { cursor: pointer; border: 1px solid transparent; border-radius: 3px; background: transparent; color: var(--text-faint); padding: 4px 7px; font-size: 10px; }
 .view-action:hover, .view-action[aria-pressed="true"] { color: var(--text-soft); border-color: var(--line); background: rgba(119, 152, 157, .1); }
+.view-action-icon { min-width: 24px; padding: 3px 5px; color: var(--teal); font-size: 15px; line-height: 1; }
+.view-action-axis { min-width: 22px; padding: 4px 5px; font-family: var(--font-mono); }
+.view-action-divider { width: 1px; height: 18px; margin: 0 1px; background: var(--line-soft); }
 .viewport-stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #07151d; }
 .geometry-view, .results-view { position: absolute; inset: 0; }
 .geometry-view canvas, .results-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .geometry-view { cursor: grab; }
 .geometry-view.dragging { cursor: grabbing; }
+.geometry-view.panning { cursor: move; }
 .canvas-hint { position: absolute; left: 15px; bottom: 13px; color: rgba(196, 224, 225, .52); font-size: 10px; pointer-events: none; }
 .mouse-icon { color: var(--teal); font-size: 13px; }
 .viewport-overlay { position: absolute; top: 14px; left: 16px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; }

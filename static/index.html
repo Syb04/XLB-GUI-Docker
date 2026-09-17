@@ -128,6 +128,13 @@
             <button type="button" class="view-tab" data-view="results" role="tab" aria-selected="false">結果ビュー</button>
           </div>
           <div class="viewport-actions">
+            <button type="button" class="view-action view-action-icon" data-action="zoom-in" title="拡大" aria-label="モデルを拡大">＋</button>
+            <button type="button" class="view-action view-action-icon" data-action="zoom-out" title="縮小" aria-label="モデルを縮小">−</button>
+            <span class="view-action-divider" aria-hidden="true"></span>
+            <button type="button" class="view-action view-action-axis" data-action="view-axis" data-axis="x" title="X軸方向から見る">X</button>
+            <button type="button" class="view-action view-action-axis" data-action="view-axis" data-axis="y" title="Y軸方向から見る">Y</button>
+            <button type="button" class="view-action view-action-axis" data-action="view-axis" data-axis="z" title="Z軸方向から見る">Z</button>
+            <span class="view-action-divider" aria-hidden="true"></span>
             <button type="button" class="view-action" data-action="fit-view" title="モデルを画面に合わせる">フィット</button>
             <button type="button" class="view-action" data-action="reset-view" title="表示角度をリセット">視点リセット</button>
             <button type="button" class="view-action" data-action="toggle-grid" aria-pressed="true" title="グリッド表示を切り替え">グリッド</button>
@@ -135,8 +142,8 @@
         </div>
         <div class="viewport-stage">
           <div id="geometryView" class="geometry-view" role="tabpanel" aria-label="モデルビュー">
-            <canvas id="geometryCanvas" aria-label="3D ジオメトリプレビュー"></canvas>
-            <div class="canvas-hint"><span class="mouse-icon">●</span> 面をクリックして境界を選択　<span class="mouse-icon">↔</span> ドラッグで回転　<span class="mouse-icon">◒</span> ホイールでズーム</div>
+            <canvas id="geometryCanvas" aria-label="3D ジオメトリプレビュー" tabindex="0"></canvas>
+            <div class="canvas-hint"><span class="mouse-icon">●</span> クリックで面を選択　<span class="mouse-icon">↔</span> 左ドラッグで回転　<span class="mouse-icon">✥</span> Shift＋ドラッグ／右ドラッグでパン　<span class="mouse-icon">◒</span> ホイールでズーム</div>
             <div id="geometryOverlay" class="viewport-overlay">
               <span class="overlay-kicker">GEOMETRY PREVIEW</span>
               <strong id="geometryOverlayTitle">流体領域</strong>
