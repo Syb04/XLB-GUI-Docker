@@ -3728,22 +3728,22 @@
           return { x: centroid[0], y: centroid[1], faceIndex: face.faceIndex, groupId: faceGroups[face.faceIndex] || surfaceGroupForTriangle(face.faceIndex, source), vertices: face.valid.map((point) => point.slice()) };
         }));
       }
-      visibleFaces.forEach((face, index) => {
+      visibleFaces.forEach((face) => {
         ctx.beginPath(); ctx.moveTo(face.valid[0][0], face.valid[0][1]); face.valid.slice(1).forEach((point) => ctx.lineTo(point[0], point[1])); ctx.closePath();
-        const opacity = layer.role === 'solid' ? .30 + (index % 3) * .035 : state.mesh ? .13 + (index % 3) * .025 : .18;
+        // CAD is tessellated internally for voxelisation.  Draw its filled
+        // surface without triangle strokes so the preview remains a CAD model,
+        // rather than looking like the user has already created a mesh.
+        const opacity = layer.role === 'solid' ? .24 : state.mesh ? .32 : .42;
         const groupId = faceGroups[face.faceIndex] || (fluidLayer ? surfaceGroupForTriangle(face.faceIndex, source) : null);
         const highlighted = fluidLayer && (selectedTriangles.has(face.faceIndex) || (Boolean(groupId) && groupId === state.selectedSurface));
         if (highlighted) {
           ctx.fillStyle = 'rgba(247, 193, 82, .62)';
-          ctx.strokeStyle = 'rgba(255, 220, 123, .95)';
         } else if (layer.role === 'solid') {
           ctx.fillStyle = `rgba(234, 183, 101, ${opacity})`;
-          ctx.strokeStyle = 'rgba(246, 205, 113, .92)';
         } else {
           ctx.fillStyle = state.mesh ? `rgba(50, 209, 195, ${opacity})` : `rgba(79, 185, 233, ${opacity})`;
-          ctx.strokeStyle = state.mesh ? 'rgba(77, 204, 212, .58)' : 'rgba(104, 184, 217, .8)';
         }
-        ctx.fill(); ctx.lineWidth = highlighted ? 1.6 : layer.role === 'solid' ? 1.25 : 1; ctx.stroke();
+        ctx.fill();
       });
     });
     const projectedMesh = meshPoints.map((point) => projectGeometryPoint(point, center, scale, width, height));
