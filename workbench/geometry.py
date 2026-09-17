@@ -217,8 +217,20 @@ def _load_gmsh_surface(path: Path) -> tuple[np.ndarray, np.ndarray, int, list[st
             pass
 
 
-def _normalise_surface(vertices: Any, faces: Any, scale: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
-    """Validate a surface and weld only exactly equal vertex coordinates."""
+def _normalise_surface(
+    vertices: Any,
+    faces: Any,
+    scale: float = 1.0,
+    *,
+    return_kept_face_indices: bool = False,
+) -> tuple[np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Validate a surface, weld exact vertices, and remove exact repeated facets.
+
+    CAD tessellators can emit one triangle twice at coincident trimmed-surface
+    boundaries.  Keeping one copy is geometrically lossless and prevents a
+    duplicated facet from being interpreted as an invalid volume.  Near-equal
+    vertices or triangles are never merged.
+    """
 
     try:
         raw_vertices = np.asarray(vertices)
@@ -263,8 +275,12 @@ def _normalise_surface(vertices: Any, faces: Any, scale: float = 1.0) -> tuple[n
     normalized_faces = inverse.reshape(-1, 3).astype(np.int32, copy=False)
     if np.any(normalized_faces[:, 0] == normalized_faces[:, 1]) or np.any(normalized_faces[:, 1] == normalized_faces[:, 2]) or np.any(normalized_faces[:, 0] == normalized_faces[:, 2]):
         raise ValueError("CAD surface contains a zero-area triangle")
-    if len(np.unique(np.sort(normalized_faces, axis=1), axis=0)) != len(normalized_faces):
-        raise ValueError("CAD surface contains duplicate triangles")
+    canonical_faces = np.sort(normalized_faces, axis=1)
+    _, kept_face_indices = np.unique(canonical_faces, axis=0, return_index=True)
+    kept_face_indices = np.sort(kept_face_indices.astype(np.int64, copy=False))
+    normalized_faces = normalized_faces[kept_face_indices]
+    if len(normalized_faces) < 4:
+        raise ValueError("CAD surface must contain at least four non-duplicate triangles")
     triangles = unique_vertices[normalized_faces]
     cross = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
     extent = float(np.linalg.norm(np.ptp(unique_vertices, axis=0)))
@@ -275,7 +291,10 @@ def _normalise_surface(vertices: Any, faces: Any, scale: float = 1.0) -> tuple[n
         raise ValueError("CAD surface contains a zero-area or extremely small triangle")
     if np.any(np.ptp(unique_vertices, axis=0) <= max(extent * 1.0e-12, 1.0e-15)):
         raise ValueError("CAD surface must span all three spatial axes")
-    return unique_vertices.astype(np.float64, copy=False), normalized_faces
+    normalized_vertices = unique_vertices.astype(np.float64, copy=False)
+    if return_kept_face_indices:
+        return normalized_vertices, normalized_faces, kept_face_indices
+    return normalized_vertices, normalized_faces
 
 
 def _surface_group_summary(
@@ -460,7 +479,13 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
     if raw_vertices.ndim != 2 or raw_vertices.shape[1] != 3 or len(raw_vertices) == 0:
         raise ValueError("CAD source did not produce a non-empty (N, 3) vertex array")
     original_bounds = np.asarray([raw_vertices.min(axis=0), raw_vertices.max(axis=0)], dtype=np.float64).tolist()
-    vertices, faces = _normalise_surface(vertices, faces, scale)
+    source_triangle_count = int(len(faces))
+    vertices, faces, kept_face_indices = _normalise_surface(
+        vertices, faces, scale, return_kept_face_indices=True
+    )
+    duplicate_triangles_removed = source_triangle_count - int(len(faces))
+    if native_triangle_groups is not None:
+        native_triangle_groups = [native_triangle_groups[int(index)] for index in kept_face_indices]
     bounds_array = np.asarray([vertices.min(axis=0), vertices.max(axis=0)], dtype=np.float64)
     watertight, winding_consistent = _surface_status(vertices, faces)
     if native_triangle_groups is None:
@@ -493,6 +518,7 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
             "original_vertex_count": int(original_vertex_count),
             "vertex_count": int(len(vertices)),
             "triangle_count": int(len(faces)),
+            "duplicate_triangles_removed": duplicate_triangles_removed,
             "vertices": vertices.tolist(),
             "faces": faces.tolist(),
             "bounds": bounds_array.tolist(),

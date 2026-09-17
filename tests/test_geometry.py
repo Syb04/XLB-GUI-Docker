@@ -111,6 +111,21 @@ class GeometryTests(unittest.TestCase):
             self.assertEqual(mesh["shape"], [10, 10, 10])
             self.assertTrue(mesh["fluid_mask"].all())
 
+    def test_import_removes_exact_duplicate_triangles_without_changing_surface(self):
+        cube = trimesh.creation.box(extents=[10.0, 10.0, 10.0])
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "duplicate-face.obj"
+            lines = [f"v {x} {y} {z}" for x, y, z in cube.vertices]
+            lines.extend("f " + " ".join(str(int(index) + 1) for index in face) for face in cube.faces)
+            lines.append("f " + " ".join(str(int(index) + 1) for index in cube.faces[0]))
+            source.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            metadata = import_cad(source, root / "assets", unit="mm")
+
+        self.assertEqual(metadata["duplicate_triangles_removed"], 1)
+        self.assertEqual(metadata["triangle_count"], len(cube.faces))
+        self.assertTrue(metadata["watertight"])
+
     def test_paired_cad_fluid_and_solid_meshes_share_one_cht_grid(self):
         """Separate closed CAD volumes must classify without overlap."""
         fluid_volume = trimesh.creation.box(extents=[10.0, 10.0, 10.0])
