@@ -12,8 +12,8 @@ init({ locateFile: (name) => path.join(vendor, name) }).then((occt) => {
   result.meshes.forEach((mesh, meshIndex) => {
     const position = mesh?.attributes?.position?.array || [], index = mesh?.index?.array || [], offset = vertices.length;
     for (let point = 0; point + 2 < position.length; point += 3) vertices.push([position[point], position[point + 1], position[point + 2]]);
-    const ranges = (mesh.brep_faces || []).map((face, faceIndex) => { const id = `brep-${meshIndex + 1}-${faceIndex + 1}`; names[id] = `CAD Face ${meshIndex + 1}.${faceIndex + 1}`; return { id, first: Number(face.first), last: Number(face.last) }; });
-    for (let triangle = 0; triangle + 2 < index.length; triangle += 3) { const row = triangle / 3; const group = ranges.find((face) => row >= face.first && row <= face.last)?.id || `brep-${meshIndex + 1}-unclassified`; faces.push([offset + Number(index[triangle]), offset + Number(index[triangle + 1]), offset + Number(index[triangle + 2])]); groups.push(group); }
+    const ranges = (mesh.brep_faces || []).map((face, faceIndex) => { const id = `brep-${meshIndex}-${faceIndex + 1}`; names[id] = `CAD Face ${meshIndex + 1}.${faceIndex + 1}`; return { id, first: Number(face.first), last: Number(face.last) }; });
+    for (let triangle = 0; triangle + 2 < index.length; triangle += 3) { const row = triangle / 3; const group = ranges.find((face) => row >= face.first && row <= face.last)?.id || `brep-${meshIndex}-unclassified`; faces.push([offset + Number(index[triangle]), offset + Number(index[triangle + 1]), offset + Number(index[triangle + 2])]); groups.push(group); }
   });
   const remap = new Map(), merged = [], indices = vertices.map((point) => {
     const key = point.map((value) => Math.round(Number(value) * 1e9)).join(',');
