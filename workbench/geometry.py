@@ -482,6 +482,16 @@ def _surface_status(vertices: np.ndarray, faces: np.ndarray) -> tuple[bool, bool
     return bool(mesh.is_watertight), bool(mesh.is_winding_consistent)
 
 
+def _has_nonmanifold_edges(faces: np.ndarray) -> bool:
+    """Return whether any undirected edge belongs to more than two facets."""
+
+    edges = np.sort(
+        np.concatenate((faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]])), axis=0
+    )
+    _, counts = np.unique(edges, axis=0, return_counts=True)
+    return bool(np.any(counts > 2))
+
+
 def _repair_nonwatertight_surface(
     vertices: np.ndarray,
     faces: np.ndarray,
@@ -494,19 +504,55 @@ def _repair_nonwatertight_surface(
     same strict normalisation and watertightness checks as an ordinary import.
     """
 
+    # A normal open CAD surface is ambiguous: automatically capping it can
+    # create a plausible but unintended flow volume.  Limit MeshFix to the
+    # exporter defects it is meant to address (overlapping/non-manifold
+    # facets), then apply the extent preservation test below.
+    if not _has_nonmanifold_edges(faces):
+        return None
     try:
         import pymeshfix  # type: ignore
         repair = pymeshfix.MeshFix(vertices, faces)
         repair.repair(joincomp=True, remove_smallest_components=False)
         repaired_vertices, repaired_faces = _normalise_surface(repair.points, repair.faces)
         watertight, winding_consistent = _surface_status(repaired_vertices, repaired_faces)
-        if watertight and winding_consistent:
+        if watertight and winding_consistent and _repair_preserves_cad_extent(
+            vertices, repaired_vertices
+        ):
             return repaired_vertices, repaired_faces
     except Exception:
         # Retain the original CAD surface and let the normal mesh validation
         # report the problem when no conservative automatic repair is possible.
         return None
     return None
+
+
+def _repair_preserves_cad_extent(
+    original_vertices: np.ndarray, repaired_vertices: np.ndarray
+) -> bool:
+    """Reject topological repairs that remove a material part of the CAD body.
+
+    MeshFix is deliberately aggressive: a disconnected or self-intersecting
+    portion can be discarded in order to produce a closed manifold.  A closed
+    result is useful only when it still spans the imported CAD extents.  This
+    inexpensive guard prevents a partial U-bend from being substituted for a
+    multi-pass channel while allowing sub-percent tessellation adjustments.
+    """
+
+    original_bounds = np.asarray(
+        [original_vertices.min(axis=0), original_vertices.max(axis=0)], dtype=np.float64
+    )
+    repaired_bounds = np.asarray(
+        [repaired_vertices.min(axis=0), repaired_vertices.max(axis=0)], dtype=np.float64
+    )
+    extent = original_bounds[1] - original_bounds[0]
+    tolerance = np.maximum(extent * 0.01, 1.0e-9)
+    return bool(
+        np.all(repaired_bounds[0] <= original_bounds[0] + tolerance)
+        and np.all(repaired_bounds[1] >= original_bounds[1] - tolerance)
+        and np.all(repaired_bounds[0] >= original_bounds[0] - tolerance)
+        and np.all(repaired_bounds[1] <= original_bounds[1] + tolerance)
+    )
 
 
 def _remap_triangle_groups(
@@ -588,7 +634,15 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
         original_vertices = vertices
         original_faces = faces
         original_groups = list(native_triangle_groups) if native_triangle_groups is not None else None
-        repaired = _repair_nonwatertight_surface(vertices, faces)
+        # A mesh file has no CAD topology to distinguish an intentional inlet
+        # opening from a damaged shell.  Keep it unchanged and require the
+        # user to provide a closed volume; safe automatic repair is reserved
+        # for a STEP/IGES/BREP tessellation.
+        repaired = (
+            _repair_nonwatertight_surface(vertices, faces)
+            if extension in _CAD_EXTENSIONS
+            else None
+        )
         if repaired is None:
             repair_metadata["reason"] = "no conservative watertight repair was produced"
         else:
@@ -654,6 +708,52 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
     return metadata
 
 
+def _asset_surface_does_not_preserve_original_extent(
+    vertices: np.ndarray, original_bounds: Any, scale_to_m: Any
+) -> bool:
+    """Identify an old persisted repair that discarded part of its source."""
+
+    try:
+        source_bounds = np.asarray(original_bounds, dtype=np.float64)
+        scale = float(scale_to_m)
+        if source_bounds.shape != (2, 3) or not np.isfinite(source_bounds).all() or scale <= 0:
+            return False
+        expected = source_bounds * scale
+        return not _repair_preserves_cad_extent(
+            np.asarray([expected[0], expected[1]], dtype=np.float64), vertices
+        )
+    except (TypeError, ValueError):
+        return False
+
+
+def _reload_original_asset_surface(
+    directory: Path, metadata: Mapping[str, Any]
+) -> tuple[np.ndarray, np.ndarray, list[str] | None, dict[str, str] | None] | None:
+    """Retessellate the source held by an old asset without mutating it."""
+
+    try:
+        source_name = str(metadata.get("source_file", ""))
+        source = (directory / source_name).resolve()
+        if not source.is_relative_to(directory.resolve()) or not source.is_file():
+            return None
+        extension = str(metadata.get("source_extension", source.suffix)).lower()
+        scale = float(metadata.get("scale_to_m", 1.0))
+        groups: list[str] | None = None
+        group_names: dict[str, str] | None = None
+        if extension in _MESH_EXTENSIONS:
+            vertices, faces, _ = _load_mesh_source(source)
+        elif extension in _CAD_EXTENSIONS:
+            vertices, faces, _, groups, group_names = _load_gmsh_surface(source)
+        else:
+            return None
+        vertices, faces, kept = _normalise_surface(vertices, faces, scale, return_kept_face_indices=True)
+        if groups is not None:
+            groups = [groups[int(index)] for index in kept]
+        return vertices, faces, groups, group_names
+    except Exception:
+        return None
+
+
 def _asset_surface(
     asset_root: Path,
     asset_id: str,
@@ -684,6 +784,42 @@ def _asset_surface(
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
         raise ValueError(f"CAD asset {asset_id} is invalid: {exc}") from exc
     vertices, faces = _normalise_surface(vertices, faces, 1.0)
+    # Assets created by older versions may contain a MeshFix result that is
+    # closed but represents only a subset of the CAD model.  The untouched
+    # source is stored with every asset, so reconstruct its tessellation for
+    # read-only preview and validation instead of perpetuating that loss.
+    original_bounds = metadata.get("original_bounds")
+    original_scale = metadata.get("scale_to_m", 1.0)
+    repair_record = metadata.get("surface_repair")
+    if (
+        isinstance(repair_record, Mapping)
+        and bool(repair_record.get("applied"))
+        and _asset_surface_does_not_preserve_original_extent(
+            vertices, original_bounds, original_scale
+        )
+    ):
+        restored = _reload_original_asset_surface(directory, metadata)
+        if restored is not None:
+            vertices, faces, restored_groups, restored_names = restored
+            metadata = dict(metadata)
+            metadata["surface_repair"] = {
+                "attempted": True,
+                "applied": False,
+                "original_triangle_count": int(len(faces)),
+                "reason": "previous automatic repair was rejected because it removed part of the CAD extent",
+                "on_load": True,
+            }
+            metadata["watertight"], metadata["winding_consistent"] = _surface_status(vertices, faces)
+            metadata["triangle_count"] = int(len(faces))
+            metadata["vertex_count"] = int(len(vertices))
+            metadata["bounds"] = np.asarray([vertices.min(axis=0), vertices.max(axis=0)]).tolist()
+            metadata["bounds_m"] = metadata["bounds"]
+            if restored_groups is not None:
+                restored_surface_groups, _ = _normalise_native_groups(
+                    vertices, faces, restored_groups, restored_names or {}
+                )
+                metadata["triangle_groups"] = restored_groups
+                metadata["surface_groups"] = restored_surface_groups
     raw_triangle_groups = metadata.get("triangle_groups")
     raw_surface_groups = metadata.get("surface_groups")
     watertight, winding_consistent = _surface_status(vertices, faces)
@@ -695,7 +831,11 @@ def _asset_surface(
             if isinstance(raw_triangle_groups, list) and len(raw_triangle_groups) == len(faces)
             else []
         )
-        repaired = _repair_nonwatertight_surface(vertices, faces)
+        repaired = (
+            _repair_nonwatertight_surface(vertices, faces)
+            if str(metadata.get("source_extension", "")).lower() in _CAD_EXTENSIONS
+            else None
+        )
         if repaired is not None:
             vertices, faces = repaired
             watertight, winding_consistent = _surface_status(vertices, faces)

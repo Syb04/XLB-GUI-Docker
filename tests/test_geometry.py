@@ -16,15 +16,22 @@ except Exception:  # pragma: no cover - optional native dependency
     gmsh = None
 
 try:
-    from workbench.geometry import build_mesh, import_cad
+    from workbench.geometry import _repair_preserves_cad_extent, build_mesh, import_cad
     from workbench.schema import default_project
 except ModuleNotFoundError:  # Running from the repository root.
-    from xlb_workbench.workbench.geometry import build_mesh, import_cad
+    from xlb_workbench.workbench.geometry import _repair_preserves_cad_extent, build_mesh, import_cad
     from xlb_workbench.workbench.schema import default_project
 
 
 @unittest.skipIf(trimesh is None, "trimesh is required for CAD import tests")
 class GeometryTests(unittest.TestCase):
+    def test_surface_repair_must_preserve_each_cad_extent(self):
+        original = np.asarray([[0.0, 0.011, 0.006], [0.154, 0.079, 0.014]])
+        complete = np.asarray([[0.0, 0.0111, 0.006], [0.154, 0.0789, 0.014]])
+        partial = np.asarray([[0.0, 0.051, 0.006], [0.154, 0.079, 0.014]])
+        self.assertTrue(_repair_preserves_cad_extent(original, complete))
+        self.assertFalse(_repair_preserves_cad_extent(original, partial))
+
     def test_box_mesh_isotropic_and_fluid(self):
         project = default_project()
         with tempfile.TemporaryDirectory() as temp:
