@@ -36,9 +36,9 @@ for a numerical domain.  They have different correctness requirements.
 - Simulation starts only after the server has a closed, consistently oriented
   fluid volume.
 
-## Rollout
+## Implemented preview path
 
-The next implementation adds the static Web Worker and license assets, an
-authenticated source-asset endpoint, and a B-rep face-to-boundary adapter in
-the existing canvas viewer.  The current server tessellation remains the
-calculation path until a separate topology-healing worker is justified.
+The static Web Worker, upstream WASM/license assets, source-asset endpoint,
+and B-rep face adapter are included in the workbench.  The current server
+tessellation remains the calculation path until a separate topology-healing
+worker is justified.

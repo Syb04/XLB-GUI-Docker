@@ -579,6 +579,14 @@ class Handler(BaseHTTPRequestHandler):
         elif len(parts) == 3 and parts[:2] == ['api','assets'] and method == 'GET':
             merge_angle = query.get('surface_merge_angle', [12.0])[0]
             self.send_data(load_asset_metadata(store.assets, identifier(parts[2]), float(merge_angle)))
+        elif len(parts) == 4 and parts[:2] == ['api','assets'] and parts[3] == 'source' and method == 'GET':
+            asset = store.assets / identifier(parts[2])
+            metadata = read_json(asset / 'metadata.json')
+            source_name = str(metadata.get('source_file', ''))
+            source = (asset / source_name).resolve()
+            if not source.is_relative_to(asset.resolve()) or not source.is_file():
+                raise FileNotFoundError('CAD source does not exist')
+            self.send_data(source.read_bytes(), content_type='application/octet-stream')
         elif parts == ['api','mesh','estimate'] and method == 'POST':
             self.send_data(estimate_mesh(self.body(),store.assets))
         elif parts == ['api','mesh'] and method == 'POST':

@@ -145,6 +145,7 @@
     cadImportTarget: 'fluid',
     cadAssetMeta: null,
     cadSolidAssetMeta: null,
+    cadBrepRequest: 0,
     selectedSurface: null,
     projectedFaces: [],
     serverOnline: null,
@@ -355,7 +356,7 @@
   function isKnownFace(face) { return Boolean(FACE_INFO[face]) || isCadFace(face); }
   function surfaceGroups() {
     const metadata = state.cadAssetMeta || state.mesh?.preview || state.mesh || {};
-    const groups = metadata.surface_groups || metadata.surfaceGroups || [];
+    const groups = metadata.brep_preview?.surface_groups || metadata.surface_groups || metadata.surfaceGroups || [];
     if (Array.isArray(groups)) return groups;
     if (groups && typeof groups === 'object') return Object.entries(groups).map(([id, value]) => ({ id, ...(value || {}) }));
     return [];
@@ -474,6 +475,7 @@
     invalidateMaterialCsvPreview(false);
     state.cadAssetMeta = null;
     state.cadSolidAssetMeta = null;
+    state.cadBrepRequest += 1;
     state.selectedSurface = null;
     state.projectedFaces = [];
     state.history = [];
@@ -506,9 +508,67 @@
         if (target === 'solid') state.cadSolidAssetMeta = asset;
         else state.cadAssetMeta = asset;
         renderTree(); drawGeometry(); renderInspector();
+        loadBrepPreview(asset, target);
       }
     } catch (error) {
       pushLog(`CAD アセット情報を取得できません: ${error.message}`, 'warn');
+    }
+  }
+
+  function supportedBrepExtension(asset) {
+    const extension = String(asset?.source_extension || '').toLowerCase();
+    return ['.step', '.stp', '.iges', '.igs', '.brep'].includes(extension) ? extension : null;
+  }
+
+  function brepPreview(asset, result) {
+    const vertices = []; const faces = []; const triangleGroups = []; const surfaceGroups = [];
+    (result.meshes || []).forEach((mesh, meshIndex) => {
+      const position = mesh?.attributes?.position?.array || [];
+      const index = mesh?.index?.array || [];
+      if (!Array.isArray(position) || !Array.isArray(index)) return;
+      const offset = vertices.length;
+      for (let point = 0; point + 2 < position.length; point += 3) vertices.push([Number(position[point]), Number(position[point + 1]), Number(position[point + 2])]);
+      const faceIds = [];
+      (mesh.brep_faces || []).forEach((face, faceIndex) => {
+        const id = `brep-${meshIndex}-${faceIndex + 1}`;
+        faceIds.push({ id, first: Number(face.first), last: Number(face.last) });
+        surfaceGroups.push({ id, name: `CAD Face ${meshIndex + 1}.${faceIndex + 1}`, triangle_count: Math.max(0, Number(face.last) - Number(face.first) + 1) });
+      });
+      for (let triangle = 0; triangle + 2 < index.length; triangle += 3) {
+        const triangleIndex = triangle / 3;
+        const group = faceIds.find((face) => triangleIndex >= face.first && triangleIndex <= face.last)?.id || `brep-${meshIndex}-unclassified`;
+        faces.push([offset + Number(index[triangle]), offset + Number(index[triangle + 1]), offset + Number(index[triangle + 2])]);
+        triangleGroups.push(group);
+      }
+    });
+    return { vertices, faces, triangle_groups: triangleGroups, surface_groups: surfaceGroups };
+  }
+
+  async function loadBrepPreview(asset, target) {
+    const extension = supportedBrepExtension(asset);
+    const assetId = asset?.id || asset?.asset_id;
+    if (!extension || !assetId || typeof Worker === 'undefined') return;
+    const requestId = ++state.cadBrepRequest;
+    try {
+      const response = await fetch(`/api/assets/${encodeURIComponent(assetId)}/source`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const buffer = await response.arrayBuffer();
+      const worker = new Worker('/cad-brep.worker.js');
+      const output = await new Promise((resolve, reject) => {
+        worker.onmessage = (event) => event.data?.error ? reject(new Error(event.data.error)) : resolve(event.data?.result);
+        worker.onerror = () => reject(new Error('CAD preview worker failed'));
+        worker.postMessage({ id: requestId, extension, buffer }, [buffer]);
+      });
+      worker.terminate();
+      if (requestId !== state.cadBrepRequest) return;
+      const targetAsset = target === 'solid' ? state.cadSolidAssetMeta : state.cadAssetMeta;
+      if (!targetAsset || (targetAsset.id || targetAsset.asset_id) !== assetId) return;
+      targetAsset.brep_preview = brepPreview(targetAsset, output);
+      if (target === 'fluid') state.selectedSurface = null;
+      renderTree(); renderInspector(); drawGeometry();
+      pushLog(`B-rep CAD プレビューを読み込みました: ${targetAsset.brep_preview.surface_groups.length} faces。`);
+    } catch (error) {
+      if (requestId === state.cadBrepRequest) pushLog(`B-rep プレビューを使えません。通常表示を継続します: ${error.message}`, 'warn');
     }
   }
 
@@ -3599,16 +3659,17 @@
   }
 
   function cadSurfaceGeometry(metadata, fallbackPreview = null) {
+    const brep = metadata?.brep_preview;
     const previewSurfacePoints = fallbackPreview?.vertices || fallbackPreview?.surface_vertices;
     const previewSurfaceFaces = fallbackPreview?.faces || fallbackPreview?.surface_faces;
-    const surfacePoints = Array.isArray(metadata?.vertices) && metadata.vertices.length
-      ? metadata.vertices : (Array.isArray(previewSurfacePoints) ? previewSurfacePoints : []);
-    const surfaceFaces = Array.isArray(metadata?.faces) && metadata.faces.length
-      ? metadata.faces : (Array.isArray(previewSurfaceFaces) ? previewSurfaceFaces : []);
+    const surfacePoints = Array.isArray(brep?.vertices) && brep.vertices.length ? brep.vertices : (Array.isArray(metadata?.vertices) && metadata.vertices.length
+      ? metadata.vertices : (Array.isArray(previewSurfacePoints) ? previewSurfacePoints : []));
+    const surfaceFaces = Array.isArray(brep?.faces) && brep.faces.length ? brep.faces : (Array.isArray(metadata?.faces) ? metadata.faces : (Array.isArray(previewSurfaceFaces) ? previewSurfaceFaces : []));
     if (!surfacePoints.length) return null;
     return {
       points: surfacePoints.map(pointToArray).filter(Boolean),
       faces: surfaceFaces,
+      faceGroups: Array.isArray(brep?.triangle_groups) ? brep.triangle_groups : [],
       meshPoints: Array.isArray(fallbackPreview?.points) ? fallbackPreview.points.map(pointToArray).filter(Boolean) : [],
       source: 'cad'
     };
