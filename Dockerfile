@@ -6,11 +6,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ARG JAX_CUDA=0
-# Keep the large CUDA runtime layer independent of application dependencies.
-# Geometry-library updates then reuse it during normal image rebuilds.
-RUN if [ "$JAX_CUDA" = "1" ]; then pip install --no-cache-dir 'jax[cuda12]==0.11.1'; fi
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# requirements.txt pins JAX for CPU-only development.  Install the CUDA extra
+# afterwards, otherwise its CUDA plugin is replaced by the CPU jaxlib wheel.
+RUN pip install --no-cache-dir -r requirements.txt \
+    && if [ "$JAX_CUDA" = "1" ]; then pip install --no-cache-dir --upgrade 'jax[cuda12]==0.11.1'; fi
 RUN useradd --create-home --uid 10001 workbench \
     && mkdir -p /data /home/workbench/.cache \
     && chown -R workbench:workbench /data /home/workbench
