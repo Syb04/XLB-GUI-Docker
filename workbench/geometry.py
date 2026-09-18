@@ -13,6 +13,7 @@ import json
 import math
 import re
 import shutil
+import subprocess
 import uuid
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -33,6 +34,27 @@ _SCALE = {"m": 1.0, "cm": 1.0e-2, "mm": 1.0e-3}
 _MESH_EXTENSIONS = {".stl", ".obj"}
 _CAD_EXTENSIONS = {".step", ".stp", ".iges", ".igs", ".brep"}
 CadSurface = tuple[np.ndarray, np.ndarray, dict[str, Any]]
+
+
+def _load_occt_wasm_surface(path: Path) -> tuple[np.ndarray, np.ndarray, int, list[str], dict[str, str]]:
+    """Tessellate B-rep CAD through the bundled OpenCascade WASM bridge."""
+
+    script = Path(__file__).resolve().parents[1] / "static" / "occt-tessellate.cjs"
+    try:
+        result = subprocess.run(
+            ["node", str(script), str(path), path.suffix.lower()],
+            check=True, capture_output=True, text=True, timeout=90,
+        )
+        payload = json.loads(result.stdout)
+        vertices = np.asarray(payload["vertices"], dtype=np.float64)
+        faces = np.asarray(payload["faces"], dtype=np.int64)
+        groups = [str(value) for value in payload["groups"]]
+        names = {str(key): str(value) for key, value in dict(payload.get("names", {})).items()}
+        if len(groups) != len(faces):
+            raise ValueError("OpenCascade face groups do not match tessellation")
+        return vertices, faces, int(len(vertices)), groups, names
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"OpenCascade could not tessellate CAD source: {exc}") from exc
 
 
 def _unit_scale(unit: str) -> tuple[str, float]:
@@ -606,8 +628,11 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
     native_group_names: dict[str, str] | None = None
     if extension in _MESH_EXTENSIONS:
         vertices, faces, original_vertex_count = _load_mesh_source(source)
+        tessellation_scale = scale
     elif extension in _CAD_EXTENSIONS:
-        vertices, faces, original_vertex_count, native_triangle_groups, native_group_names = _load_gmsh_surface(source)
+        vertices, faces, original_vertex_count, native_triangle_groups, native_group_names = _load_occt_wasm_surface(source)
+        # The OpenCascade bridge applies STEP/IGES linearUnit='meter'.
+        tessellation_scale = 1.0
     else:
         supported = ", ".join(sorted(_MESH_EXTENSIONS | _CAD_EXTENSIONS))
         raise ValueError(f"unsupported CAD extension {extension!r}; use {supported}")
@@ -617,7 +642,7 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
     original_bounds = np.asarray([raw_vertices.min(axis=0), raw_vertices.max(axis=0)], dtype=np.float64).tolist()
     source_triangle_count = int(len(faces))
     vertices, faces, kept_face_indices = _normalise_surface(
-        vertices, faces, scale, return_kept_face_indices=True
+        vertices, faces, tessellation_scale, return_kept_face_indices=True
     )
     duplicate_triangles_removed = source_triangle_count - int(len(faces))
     if native_triangle_groups is not None:
@@ -742,11 +767,13 @@ def _reload_original_asset_surface(
         group_names: dict[str, str] | None = None
         if extension in _MESH_EXTENSIONS:
             vertices, faces, _ = _load_mesh_source(source)
+            tessellation_scale = scale
         elif extension in _CAD_EXTENSIONS:
-            vertices, faces, _, groups, group_names = _load_gmsh_surface(source)
+            vertices, faces, _, groups, group_names = _load_occt_wasm_surface(source)
+            tessellation_scale = 1.0
         else:
             return None
-        vertices, faces, kept = _normalise_surface(vertices, faces, scale, return_kept_face_indices=True)
+        vertices, faces, kept = _normalise_surface(vertices, faces, tessellation_scale, return_kept_face_indices=True)
         if groups is not None:
             groups = [groups[int(index)] for index in kept]
         return vertices, faces, groups, group_names

@@ -2,7 +2,7 @@ FROM python:3.12-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     XLB_DATA_DIR=/data HOME=/home/workbench MPLCONFIGDIR=/home/workbench/.cache/matplotlib
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git libglu1-mesa libgl1 libgomp1 libxrender1 libxcursor1 libxinerama1 libsm6 libxext6 libxft2 \
+    git nodejs libglu1-mesa libgl1 libgomp1 libxrender1 libxcursor1 libxinerama1 libsm6 libxext6 libxft2 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ARG JAX_CUDA=0
