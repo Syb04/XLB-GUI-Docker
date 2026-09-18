@@ -356,10 +356,30 @@ def _surface_group_summary(
     return summaries
 
 
-_SMOOTH_SURFACE_ANGLE_DEG = 12.0
+DEFAULT_SURFACE_MERGE_ANGLE_DEG = 12.0
+MIN_SURFACE_MERGE_ANGLE_DEG = 0.0
+MAX_SURFACE_MERGE_ANGLE_DEG = 45.0
 
 
-def _derive_surface_groups(vertices: np.ndarray, faces: np.ndarray) -> tuple[list[dict[str, Any]], list[str]]:
+def _surface_merge_angle(value: Any = DEFAULT_SURFACE_MERGE_ANGLE_DEG) -> float:
+    """Validate the selectable crease angle used for mesh CAD grouping."""
+
+    try:
+        angle = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("surface merge angle must be a number") from exc
+    if not math.isfinite(angle) or not MIN_SURFACE_MERGE_ANGLE_DEG <= angle <= MAX_SURFACE_MERGE_ANGLE_DEG:
+        raise ValueError(
+            f"surface merge angle must be between {MIN_SURFACE_MERGE_ANGLE_DEG:g} and {MAX_SURFACE_MERGE_ANGLE_DEG:g} degrees"
+        )
+    return angle
+
+
+def _derive_surface_groups(
+    vertices: np.ndarray,
+    faces: np.ndarray,
+    surface_merge_angle: float = DEFAULT_SURFACE_MERGE_ANGLE_DEG,
+) -> tuple[list[dict[str, Any]], list[str]]:
     """Group connected smooth triangles into selectable STL/OBJ surfaces.
 
     Mesh CAD commonly uses many small planar strips to approximate cylinders
@@ -372,7 +392,7 @@ def _derive_surface_groups(vertices: np.ndarray, faces: np.ndarray) -> tuple[lis
     cross = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
     normal_lengths = np.linalg.norm(cross, axis=1)
     normals = cross / normal_lengths[:, None]
-    smooth_cosine = math.cos(math.radians(_SMOOTH_SURFACE_ANGLE_DEG))
+    smooth_cosine = math.cos(math.radians(_surface_merge_angle(surface_merge_angle)))
     edge_to_faces: dict[tuple[int, int], list[int]] = {}
     for face_index, face in enumerate(faces.tolist()):
         for first, second in ((face[0], face[1]), (face[1], face[2]), (face[2], face[0])):
@@ -409,7 +429,7 @@ def _derive_surface_groups(vertices: np.ndarray, faces: np.ndarray) -> tuple[lis
     triangle_groups = [""] * len(faces)
     group_names: dict[str, str] = {}
     for number, indices in enumerate(ordered_components, start=1):
-        group_id = f"patch-{number}"
+        group_id = f"surface-{number}"
         group_names[group_id] = f"Surface {number}"
         for index in indices:
             triangle_groups[index] = group_id
@@ -634,7 +654,11 @@ def import_cad(path: str | Path, asset_dir: str | Path, unit: str = "m") -> dict
     return metadata
 
 
-def _asset_surface(asset_root: Path, asset_id: str) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+def _asset_surface(
+    asset_root: Path,
+    asset_id: str,
+    surface_merge_angle: float = DEFAULT_SURFACE_MERGE_ANGLE_DEG,
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     asset_id = _safe_asset_id(asset_id)
     root = asset_root.resolve()
     directory = (root / asset_id).resolve()
@@ -687,6 +711,7 @@ def _asset_surface(asset_root: Path, asset_id: str) -> tuple[np.ndarray, np.ndar
                 "repaired_triangle_count": int(len(faces)),
                 "on_load": True,
             }
+    merge_angle = _surface_merge_angle(surface_merge_angle)
     source_extension = str(metadata.get("source_extension", "")).lower()
     regrouped_aliases: dict[str, str] = {}
     if source_extension in _MESH_EXTENSIONS:
@@ -697,7 +722,7 @@ def _asset_surface(asset_root: Path, asset_id: str) -> tuple[np.ndarray, np.ndar
             if isinstance(raw_triangle_groups, list) and len(raw_triangle_groups) == len(faces)
             else []
         )
-        surface_groups, triangle_groups = _derive_surface_groups(vertices, faces)
+        surface_groups, triangle_groups = _derive_surface_groups(vertices, faces, merge_angle)
         regrouped_aliases = _surface_group_aliases(previous_groups, triangle_groups)
     elif isinstance(raw_triangle_groups, list) and len(raw_triangle_groups) == len(faces):
         triangle_groups = [str(value) for value in raw_triangle_groups]
@@ -723,12 +748,17 @@ def _asset_surface(asset_root: Path, asset_id: str) -> tuple[np.ndarray, np.ndar
         metadata["bounds_m"] = metadata["bounds"]
     metadata["surface_groups"] = surface_groups
     metadata["triangle_groups"] = triangle_groups
+    metadata["surface_merge_angle"] = merge_angle
     if regrouped_aliases:
         metadata["surface_group_aliases"] = regrouped_aliases
     return vertices, faces, metadata
 
 
-def load_asset_metadata(asset_dir: str | Path, asset_id: str) -> dict[str, Any]:
+def load_asset_metadata(
+    asset_dir: str | Path,
+    asset_id: str,
+    surface_merge_angle: float = DEFAULT_SURFACE_MERGE_ANGLE_DEG,
+) -> dict[str, Any]:
     """Read an asset manifest and lazily enrich older assets with patch data.
 
     Older workbench assets contain only the normalized surface and basic bounds.
@@ -737,7 +767,7 @@ def load_asset_metadata(asset_dir: str | Path, asset_id: str) -> dict[str, Any]:
     preview endpoints to expose selectable CAD faces without rewriting files.
     """
 
-    vertices, faces, metadata = _asset_surface(Path(asset_dir), asset_id)
+    vertices, faces, metadata = _asset_surface(Path(asset_dir), asset_id, surface_merge_angle)
     enriched = dict(metadata)
     enriched["vertices"] = vertices.tolist()
     enriched["faces"] = faces.tolist()
@@ -939,10 +969,10 @@ def _plan_mesh(
     surface: CadSurface | None = None
     solid_surface: CadSurface | None = None
     if kind == "cad":
-        surface = _asset_surface(Path(assets_dir), geometry["asset_id"])
+        surface = _asset_surface(Path(assets_dir), geometry["asset_id"], geometry["surface_merge_angle"])
         solid_asset_id = geometry.get("solid_asset_id")
         if solid_asset_id is not None:
-            solid_surface = _asset_surface(Path(assets_dir), solid_asset_id)
+            solid_surface = _asset_surface(Path(assets_dir), solid_asset_id, geometry["surface_merge_angle"])
 
     if target is not None:
         if kind == "box" and role == "fluid":

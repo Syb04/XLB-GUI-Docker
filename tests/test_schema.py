@@ -47,9 +47,19 @@ class SchemaTests(unittest.TestCase):
         self.assertEqual(validated["mesh"]["cells"], [30, 10, 10])
         self.assertEqual(validated["study"]["dt"], 0.01)
         self.assertEqual(validated["geometry"]["size"], [0.06, 0.02, 0.02])
+        self.assertEqual(validated["geometry"]["surface_merge_angle"], 12.0)
         self.assertEqual(validated["geometry"]["size"][0] / validated["mesh"]["cells"][0], 0.002)
         self.assertEqual(validated["geometry"]["size"][1] / validated["mesh"]["cells"][1], 0.002)
         self.assertEqual(validated["boundaries"][-1]["thermal"], {"type": "heat_flux", "value": 1000.0})
+
+    def test_surface_merge_angle_is_bounded(self):
+        project = default_project()
+        project["geometry"]["surface_merge_angle"] = 25
+        self.assertEqual(validate_project(project)["geometry"]["surface_merge_angle"], 25.0)
+        for angle in (-0.1, 45.1, "12"):
+            project["geometry"]["surface_merge_angle"] = angle
+            with self.assertRaisesRegex(ValueError, "surface_merge_angle"):
+                validate_project(project)
 
     def test_validation_does_not_mutate_input(self):
         project = default_project()

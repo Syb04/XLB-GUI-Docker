@@ -577,7 +577,8 @@ class Handler(BaseHTTPRequestHandler):
                     metadata = import_cad(path,store.assets,query.get('unit',['m'])[0])
             self.send_data(metadata,201)
         elif len(parts) == 3 and parts[:2] == ['api','assets'] and method == 'GET':
-            self.send_data(load_asset_metadata(store.assets, identifier(parts[2])))
+            merge_angle = query.get('surface_merge_angle', [12.0])[0]
+            self.send_data(load_asset_metadata(store.assets, identifier(parts[2]), float(merge_angle)))
         elif parts == ['api','mesh','estimate'] and method == 'POST':
             self.send_data(estimate_mesh(self.body(),store.assets))
         elif parts == ['api','mesh'] and method == 'POST':

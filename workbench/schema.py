@@ -473,6 +473,7 @@ def default_project() -> dict[str, Any]:
             "asset_id": None,
             "solid_asset_id": None,
             "role": "fluid",
+            "surface_merge_angle": 12.0,
             "solids": [],
         },
         "materials": [
@@ -555,7 +556,7 @@ def validate_project(project: Any) -> dict[str, Any]:
         {
             "kind", "size", "asset_id", "solid_asset_id", "role", "origin", "computational_box", "domain",
             "domain_size", "domain_origin", "box_size", "box_origin",
-            "solid_material_id", "solids",
+            "solid_material_id", "solids", "surface_merge_angle",
         },
         "geometry",
     )
@@ -565,6 +566,9 @@ def validate_project(project: Any) -> dict[str, Any]:
     role = geometry.get("role")
     if role not in ("fluid", "obstacle"):
         _fail("geometry.role must be 'fluid' or 'obstacle'")
+    surface_merge_angle = _finite(geometry.get("surface_merge_angle", 12.0), "geometry.surface_merge_angle")
+    if not 0.0 <= surface_merge_angle <= 45.0:
+        _fail("geometry.surface_merge_angle must be between 0 and 45 degrees")
     if kind == "box" and "size" not in geometry:
         _fail("geometry.size is required for a box")
     if "size" in geometry:
@@ -618,6 +622,7 @@ def validate_project(project: Any) -> dict[str, Any]:
     normalized_geometry["asset_id"] = asset_id
     normalized_geometry["solid_asset_id"] = solid_asset_id
     normalized_geometry["role"] = role
+    normalized_geometry["surface_merge_angle"] = surface_merge_angle
     normalized_geometry["solids"] = solids
     if solid_material_id is not None:
         normalized_geometry["solid_material_id"] = solid_material_id

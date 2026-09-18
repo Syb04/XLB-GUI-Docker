@@ -63,7 +63,7 @@
   const DEFAULT_PROJECT = {
     schema_version: 1,
     name: '無題のモデル',
-    geometry: { kind: 'box', size: [0.06, 0.02, 0.02], asset_id: null, solid_asset_id: null, role: 'fluid' },
+    geometry: { kind: 'box', size: [0.06, 0.02, 0.02], asset_id: null, solid_asset_id: null, role: 'fluid', surface_merge_angle: 12 },
     materials: [{
       id: 'water', name: 'Water',
       density: { kind: 'constant', value: 998 },
@@ -249,6 +249,7 @@
       : clone(DEFAULT_PROJECT.geometry.size);
     project.geometry.asset_id = project.geometry.asset_id || null;
     project.geometry.solid_asset_id = project.geometry.solid_asset_id || null;
+    project.geometry.surface_merge_angle = Math.max(0, Math.min(45, numberOr(project.geometry.surface_merge_angle, 12)));
     if (Array.isArray(project.geometry.solids)) project.geometry.solids = project.geometry.solids.map(normalizeSolid).filter(Boolean);
     if (project.geometry.solid_material_id !== undefined) project.geometry.solid_material_id = project.geometry.solid_material_id || null;
     project.materials = Array.isArray(project.materials) && project.materials.length ? project.materials : clone(DEFAULT_PROJECT.materials);
@@ -495,7 +496,8 @@
 
   async function loadAssetMeta(assetId, target = 'fluid') {
     try {
-      const payload = await request(`/api/assets/${encodeURIComponent(assetId)}`);
+      const mergeAngle = Math.max(0, Math.min(45, numberOr(state.project?.geometry?.surface_merge_angle, 12)));
+      const payload = await request(`/api/assets/${encodeURIComponent(assetId)}?surface_merge_angle=${encodeURIComponent(mergeAngle)}`);
       const asset = payload.asset || payload;
       const matches = target === 'solid'
         ? state.project?.geometry?.solid_asset_id === assetId
@@ -716,6 +718,7 @@
         ` : `
           ${geometry.asset_id ? cadAssetCard(geometry, 'fluid') : '<div class="warn-note">CAD アセットが未指定です。STL / OBJ / STEP / IGES / BREP を読み込んでください。</div>'}
           <div class="button-row"><button type="button" class="button secondary compact" data-action="import-cad" data-cad-target="fluid">◇ 流体 CAD を読み込む</button></div>
+          ${geometry.asset_id ? `<div class="form-field"><label for="surfaceMergeAngle">面統合角度</label><div class="input-with-unit"><input id="surfaceMergeAngle" class="numeric" type="number" min="0" max="45" step="1" data-bind="geometry.surface_merge_angle" value="${esc(geometry.surface_merge_angle)}"><span class="input-unit">°</span></div><small>小さい値は鋭い境界を残し、大きい値は滑らかな三角形帯を一つの選択面に統合します。変更後は面リストを確認してメッシュを再生成してください。</small></div>` : ''}
           ${geometry.role === 'fluid' ? cadSolidAssetEditor(geometry) : cadSolidMaterialEditor(geometry)}
           ${surfaceSelector()}
           <div class="info-note">CAD は表面メッシュとして読み込み、流体マスクをサーバーで生成します。</div>
@@ -2044,6 +2047,10 @@
       renderTree();
       drawAll();
     }
+    if (path === 'geometry.surface_merge_angle' && state.project.geometry.asset_id) {
+      state.selectedSurface = null;
+      loadAssetMeta(state.project.geometry.asset_id, 'fluid');
+    }
     if (path.startsWith('physics.')) renderTree();
     if ((path === 'physics.flow' || path === 'physics.gravity.enabled' || path === 'physics.gravity.mode') && state.selectedNode === 'physics') renderInspector();
     if (path === 'physics.gravity.enabled' || path === 'physics.gravity.mode' || path.startsWith('physics.gravity.vector.') || path === 'physics.gravity.reference_temperature' || path === 'physics.material_id' || path === 'physics.initial_temperature') scheduleMeshEstimate();
@@ -2641,6 +2648,7 @@
       markDirty();
       closeDialog('cadDialog');
       renderTree(); renderInspector(); drawAll();
+      loadAssetMeta(assetId, target);
       pushLog(`${target === 'solid' ? '固体 CAD' : '流体 CAD'}「${file.name}」を読み込みました。アセット ID: ${assetId}`);
       toast(`${target === 'solid' ? '固体 CAD' : '流体 CAD'}を読み込みました。メッシュを生成してください。`);
     } catch (error) {
