@@ -360,7 +360,17 @@
     return [];
   }
   function surfaceGroupId(group) { return String(group?.id || group?.patch_id || group?.name || 'surface'); }
-  function surfaceGroupInfo(groupId) { return surfaceGroups().find((group) => surfaceGroupId(group) === String(groupId)) || null; }
+  function surfaceGroupAliases() {
+    const metadata = state.cadAssetMeta || state.mesh?.preview || state.mesh || {};
+    const aliases = metadata.surface_group_aliases || metadata.surfaceGroupAliases || {};
+    return aliases && typeof aliases === 'object' && !Array.isArray(aliases) ? aliases : {};
+  }
+  function canonicalSurfaceGroupId(groupId) { return String(surfaceGroupAliases()[String(groupId)] || groupId); }
+  function canonicalCadFace(face) {
+    if (!isCadFace(face) || face === 'cad') return face;
+    return `cad:${canonicalSurfaceGroupId(String(face).slice(4))}`;
+  }
+  function surfaceGroupInfo(groupId) { const canonical = canonicalSurfaceGroupId(groupId); return surfaceGroups().find((group) => surfaceGroupId(group) === canonical) || null; }
   function faceLabel(face) {
     if (FACE_INFO[face]) return FACE_INFO[face].label;
     if (isCadFace(face)) {
@@ -409,7 +419,8 @@
   }
 
   function boundaryForFace(face) {
-    return state.project.boundaries.find((boundary) => boundary.face === face) || null;
+    const canonical = canonicalCadFace(face);
+    return state.project.boundaries.find((boundary) => canonicalCadFace(boundary.face) === canonical) || null;
   }
 
   function ensureBoundary(face) {
@@ -599,7 +610,7 @@
     const material = currentMaterial();
     const hasMesh = Boolean(state.mesh);
     const boundaries = state.project.boundaries || [];
-    const boundaryByFace = Object.fromEntries(boundaries.map((boundary) => [boundary.face, boundary]));
+    const boundaryByFace = Object.fromEntries(boundaries.map((boundary) => [canonicalCadFace(boundary.face), boundary]));
     const geometryMeta = geometry.kind === 'cad' ? 'CAD' : `${fmt(geometry.size[0] * 1000, 0)} mm`;
     const materialMeta = material ? material.name : '未定義';
     const turbulence = state.project.physics.turbulence;
@@ -608,7 +619,7 @@
     const meshMeta = hasMesh ? `${fmt(state.mesh.fluid_cells || 0, 0)} fluid` : state.project.mesh.target_cells !== undefined ? `目標 ${fmt(state.project.mesh.target_cells, 0)}` : `${state.project.mesh.cells.join(' × ')}`;
     const boundaryStatus = `${boundaries.length} 定義`;
     const cadGroups = geometry.kind === 'cad' ? surfaceGroups() : [];
-    const cadBoundaries = boundaries.filter((boundary) => isCadFace(boundary.face) && boundary.face !== 'cad' && !cadGroups.some((group) => `cad:${surfaceGroupId(group)}` === boundary.face));
+    const cadBoundaries = boundaries.filter((boundary) => isCadFace(boundary.face) && boundary.face !== 'cad' && !cadGroups.some((group) => `cad:${surfaceGroupId(group)}` === canonicalCadFace(boundary.face)));
     const solidCount = Array.isArray(geometry.solids) ? geometry.solids.length : 0;
     const cadSolid = geometry.kind === 'cad' && Boolean(geometry.solid_asset_id || geometry.solid_material_id);
     const solidDomainMeta = state.run?.solid_cells ? `solid ${fmt(state.run.solid_cells, 0)}` : cadSolid ? 'CAD CHT' : solidCount ? `${solidCount} solid` : '';
@@ -632,7 +643,8 @@
       }),
       ...cadGroups.map((group) => {
         const id = surfaceGroupId(group); const face = `cad:${id}`; const boundary = boundaryByFace[face];
-        return treeButton(`face:${face}`, boundary ? '◉' : '◇', boundary?.name || group.name || id, boundary ? `${boundary.flow.type} / ${boundary.thermal.type}` : `${group.triangle_count ?? group.triangleCount ?? '—'} triangles`);
+        const automaticOldPatchName = /^Patch \d+$/.test(String(boundary?.name || ''));
+        return treeButton(`face:${face}`, boundary ? '◉' : '◇', automaticOldPatchName ? (group.name || id) : (boundary?.name || group.name || id), boundary ? `${boundary.flow.type} / ${boundary.thermal.type}` : `${group.triangle_count ?? group.triangleCount ?? '—'} triangles`);
       }),
       ...cadBoundaries.map((boundary) => treeButton(`face:${boundary.face}`, '◉', boundary.name, `${boundary.face} / ${boundary.thermal.type}`)),
       boundaries.find((boundary) => boundary.face === 'cad') ? treeButton('face:cad', '◉', boundaries.find((boundary) => boundary.face === 'cad').name, 'cad') : '',
@@ -1233,15 +1245,16 @@
     const existing = boundaryForFace(face);
     const defaultBoundary = !existing;
     const boundary = existing || normalizeBoundary({ id: uid('preview'), name: faceLabel(face) || 'Boundary', face, flow: { type: 'wall' }, thermal: { type: 'adiabatic' } });
+    const selectedFace = canonicalCadFace(boundary.face);
     const flow = boundary.flow || { type: 'wall' };
     const thermal = boundary.thermal || { type: 'adiabatic' };
     const flowType = ['velocity', 'pressure', 'wall'].includes(flow.type) ? flow.type : 'wall';
     const thermalType = ['temperature', 'heat_flux', 'convection', 'adiabatic'].includes(thermal.type) ? thermal.type : 'adiabatic';
-    const cadFace = isCadFace(boundary.face);
+    const cadFace = isCadFace(selectedFace);
     // The unspecific `cad` selector is the fallback wall for all remaining
     // surfaces.  A named `cad:<patch_id>` selector is an individual surface
     // and may use the same velocity/pressure controls as a box face.
-    const cadFallback = boundary.face === 'cad';
+    const cadFallback = selectedFace === 'cad';
     const faceChoices = [...FACES.map((value) => ({ value, label: `${FACE_INFO[value].label} (${FACE_INFO[value].short})` })), ...surfaceGroups().map((group) => { const id = surfaceGroupId(group); return { value: `cad:${id}`, label: `${group.name || id} (CAD)` }; })];
     if (face && !faceChoices.some((item) => item.value === face)) faceChoices.push({ value: face, label: `${faceLabel(face)} (CAD)` });
     return `
@@ -1249,7 +1262,7 @@
         <div class="property-section">
           <div class="section-title"><span>境界の識別</span><small>${esc(boundary.id.slice(0, 12))}</small></div>
           <div class="form-field"><label for="boundaryName">表示名</label><input id="boundaryName" type="text" maxlength="80" data-boundary-field="name" value="${esc(boundary.name)}"></div>
-          <div class="form-field"><label for="boundaryFace">対象面</label><select id="boundaryFace" data-boundary-field="face">${faceChoices.map((item) => `<option value="${esc(item.value)}" ${boundary.face === item.value ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></div>
+          <div class="form-field"><label for="boundaryFace">対象面</label><select id="boundaryFace" data-boundary-field="face">${faceChoices.map((item) => `<option value="${esc(item.value)}" ${selectedFace === item.value ? 'selected' : ''}>${esc(item.label)}</option>`).join('')}</select></div>
         </div>
         <div class="boundary-card">
           <div class="subhead"><span>Flow / 流れ</span><span>${esc(FACE_INFO[boundary.face]?.axis || (isCadFace(boundary.face) ? 'CAD' : ''))}</span></div>

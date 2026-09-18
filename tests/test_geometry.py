@@ -126,6 +126,18 @@ class GeometryTests(unittest.TestCase):
         self.assertEqual(metadata["triangle_count"], len(cube.faces))
         self.assertTrue(metadata["watertight"])
 
+    def test_import_groups_smooth_tessellated_wall_as_one_surface(self):
+        """STL facets along a smooth cylinder must not become 48 BC choices."""
+        cylinder = trimesh.creation.cylinder(radius=5.0, height=20.0, sections=48)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "smooth-cylinder.stl"
+            cylinder.export(source)
+            metadata = import_cad(source, root / "assets", unit="mm")
+
+        self.assertEqual(len(metadata["surface_groups"]), 3)
+        self.assertEqual(sorted(group["triangle_count"] for group in metadata["surface_groups"]), [48, 48, 96])
+
     def test_paired_cad_fluid_and_solid_meshes_share_one_cht_grid(self):
         """Separate closed CAD volumes must classify without overlap."""
         fluid_volume = trimesh.creation.box(extents=[10.0, 10.0, 10.0])

@@ -356,15 +356,23 @@ def _surface_group_summary(
     return summaries
 
 
+_SMOOTH_SURFACE_ANGLE_DEG = 12.0
+
+
 def _derive_surface_groups(vertices: np.ndarray, faces: np.ndarray) -> tuple[list[dict[str, Any]], list[str]]:
-    """Group connected coplanar STL/OBJ triangles into selectable patches."""
+    """Group connected smooth triangles into selectable STL/OBJ surfaces.
+
+    Mesh CAD commonly uses many small planar strips to approximate cylinders
+    and fillets.  Grouping only coplanar triangles exposes every strip as an
+    individual boundary.  A modest crease angle keeps sharp physical features
+    separate while presenting a continuous tessellated wall as one CAD face.
+    """
 
     triangles = vertices[faces]
     cross = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
     normal_lengths = np.linalg.norm(cross, axis=1)
     normals = cross / normal_lengths[:, None]
-    diagonal = float(np.linalg.norm(np.ptp(vertices, axis=0)))
-    plane_tolerance = max(diagonal * 1.0e-7, 1.0e-12)
+    smooth_cosine = math.cos(math.radians(_SMOOTH_SURFACE_ANGLE_DEG))
     edge_to_faces: dict[tuple[int, int], list[int]] = {}
     for face_index, face in enumerate(faces.tolist()):
         for first, second in ((face[0], face[1]), (face[1], face[2]), (face[2], face[0])):
@@ -388,11 +396,10 @@ def _derive_surface_groups(vertices: np.ndarray, faces: np.ndarray) -> tuple[lis
             continue
         first = adjacent[0]
         for second in adjacent[1:]:
-            if abs(float(np.dot(normals[first], normals[second]))) < 1.0 - 1.0e-6:
-                continue
-            plane = normals[first]
-            offset = float(np.dot(plane, triangles[first, 0]))
-            if float(np.max(np.abs(triangles[second] @ plane - offset))) <= plane_tolerance:
+            # Surface normals must follow the same orientation.  A 90-degree
+            # corner remains a separate selectable face; tessellation strips
+            # along a curved/tangent wall are merged.
+            if float(np.dot(normals[first], normals[second])) >= smooth_cosine:
                 union(first, second)
 
     components: dict[int, list[int]] = {}
@@ -403,10 +410,25 @@ def _derive_surface_groups(vertices: np.ndarray, faces: np.ndarray) -> tuple[lis
     group_names: dict[str, str] = {}
     for number, indices in enumerate(ordered_components, start=1):
         group_id = f"patch-{number}"
-        group_names[group_id] = f"Patch {number}"
+        group_names[group_id] = f"Surface {number}"
         for index in indices:
             triangle_groups[index] = group_id
     return _surface_group_summary(vertices, faces, triangle_groups, group_names), triangle_groups
+
+
+def _surface_group_aliases(previous: list[str], current: list[str]) -> dict[str, str]:
+    """Map a retired derived group id to its unambiguous replacement."""
+
+    if len(previous) != len(current):
+        return {}
+    targets: dict[str, set[str]] = {}
+    for old_id, new_id in zip(previous, current):
+        targets.setdefault(str(old_id), set()).add(str(new_id))
+    return {
+        old_id: next(iter(new_ids))
+        for old_id, new_ids in targets.items()
+        if len(new_ids) == 1 and old_id != next(iter(new_ids))
+    }
 
 
 def _normalise_native_groups(
@@ -665,7 +687,19 @@ def _asset_surface(asset_root: Path, asset_id: str) -> tuple[np.ndarray, np.ndar
                 "repaired_triangle_count": int(len(faces)),
                 "on_load": True,
             }
-    if isinstance(raw_triangle_groups, list) and len(raw_triangle_groups) == len(faces):
+    source_extension = str(metadata.get("source_extension", "")).lower()
+    regrouped_aliases: dict[str, str] = {}
+    if source_extension in _MESH_EXTENSIONS:
+        # Rebuild old STL/OBJ patch labels with the current smooth-surface
+        # rule.  Existing projects keep working through the returned aliases.
+        previous_groups = (
+            [str(value) for value in raw_triangle_groups]
+            if isinstance(raw_triangle_groups, list) and len(raw_triangle_groups) == len(faces)
+            else []
+        )
+        surface_groups, triangle_groups = _derive_surface_groups(vertices, faces)
+        regrouped_aliases = _surface_group_aliases(previous_groups, triangle_groups)
+    elif isinstance(raw_triangle_groups, list) and len(raw_triangle_groups) == len(faces):
         triangle_groups = [str(value) for value in raw_triangle_groups]
         group_names = {
             str(group.get("id")): str(group.get("name", group.get("id")))
@@ -689,6 +723,8 @@ def _asset_surface(asset_root: Path, asset_id: str) -> tuple[np.ndarray, np.ndar
         metadata["bounds_m"] = metadata["bounds"]
     metadata["surface_groups"] = surface_groups
     metadata["triangle_groups"] = triangle_groups
+    if regrouped_aliases:
+        metadata["surface_group_aliases"] = regrouped_aliases
     return vertices, faces, metadata
 
 
@@ -1347,12 +1383,19 @@ def _cad_boundary_links(
         for boundary in project.get("boundaries", [])
         if isinstance(boundary, Mapping) and str(boundary.get("face", "")).lower().startswith("cad:")
     }
+    raw_aliases = metadata.get("surface_group_aliases")
+    aliases = {
+        str(old_id): str(new_id)
+        for old_id, new_id in raw_aliases.items()
+        if isinstance(raw_aliases, Mapping) and old_id and new_id
+    } if isinstance(raw_aliases, Mapping) else {}
+    canonical_selectors = {aliases.get(selector, selector) for selector in requested_selectors}
     # One global CAD mask, six Cartesian border masks, and one mask for each
     # explicitly selected patch are dense bool arrays.  Check the upper bound
     # before allocating any of them; unresolved selectors share one zero mask
     # but are counted conservatively so a malformed project cannot request an
     # unbounded number of large arrays.
-    estimated_bytes = 6 * int(np.prod(fluid_mask.shape, dtype=np.int64)) * (7 + len(requested_selectors))
+    estimated_bytes = 6 * int(np.prod(fluid_mask.shape, dtype=np.int64)) * (7 + len(canonical_selectors))
     if estimated_bytes > MAX_BOUNDARY_LINK_BYTES:
         raise ValueError(
             f"CAD boundary links need {estimated_bytes / (1024**2):.1f} MiB; "
@@ -1367,7 +1410,7 @@ def _cad_boundary_links(
         spacing,
         tuple(int(value) for value in fluid_mask.shape),
         fluid_mask,
-        requested_selectors,
+        canonical_selectors,
     )
     shape = tuple(int(value) for value in fluid_mask.shape)
     links, normals = _box_boundary_links(fluid_mask)
@@ -1387,8 +1430,9 @@ def _cad_boundary_links(
     zero = np.zeros((6, *shape), dtype=bool)
     for patch_id in requested_selectors:
         selector = f"cad:{patch_id}"
-        links[selector] = groups.get(patch_id, zero)
-        normals.setdefault(selector, [0.0, 0.0, 0.0])
+        canonical_id = aliases.get(patch_id, patch_id)
+        links[selector] = groups.get(canonical_id, zero)
+        normals[selector] = normals.get(f"cad:{canonical_id}", [0.0, 0.0, 0.0])
     return links, normals
 
 
